@@ -23,7 +23,8 @@ homex/
 │       ├── PluginClassLoader         Eigener ClassLoader pro Plugin
 │       └── DescriptionParser         Liest plugin.yml (ohne externe Bibliothek)
 └── homex-plugins/
-    └── demo-licht/       Beispiel-Plugin → baut DemoLicht.jar
+    ├── demo-licht/       Beispiel-Plugin → baut DemoLicht.jar
+    └── sma-solar/        SMA-Wechselrichter (Modbus/Cloud) → baut SmaSolar.jar
 ```
 
 ## Bauen & Starten
@@ -147,8 +148,11 @@ public class MeinListener implements Listener {
 - **Reload** gibt die JAR-Dateien frei – Plugin austauschen, `reload` tippen, fertig
 - **Eigener Datenordner** `plugins/<Name>/` mit `config.properties`
 
+## Plugins
+
+- [`SmaSolar`](homex-plugins/sma-solar/README.md) – Sunny Tripower per Modbus TCP oder SMA Cloud-API
+
 ## Ideen für die nächsten Plugins
 
-- `SmaWechselrichter` – Solarertrag per Modbus TCP vom Sunny Tripower
 - `HisenseKlima` – Klimas über die lokale/Cloud-Schnittstelle steuern
 - `WebUI` – HTTP-Server + REST-API, über die die PWA alle Geräte aus der `DeviceRegistry` anzeigt

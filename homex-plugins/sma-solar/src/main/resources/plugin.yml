@@ -1,0 +1,5 @@
+name: SmaSolar
+version: ${project.version}
+main: de.homex.sma.SmaSolarPlugin
+author: Dennis
+description: Liest den SMA Sunny Tripower Smart Energy aus – lokal per Modbus TCP oder über die SMA Cloud-API

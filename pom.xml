@@ -14,6 +14,7 @@
         <module>homex-api</module>
         <module>homex-core</module>
         <module>homex-plugins/demo-licht</module>
+        <module>homex-plugins/sma-solar</module>
     </modules>
 
     <properties>

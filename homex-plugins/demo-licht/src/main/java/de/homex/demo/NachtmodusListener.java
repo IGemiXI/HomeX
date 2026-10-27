@@ -27,10 +27,10 @@ public class NachtmodusListener implements Listener {
         }
     }
 
-    /** MONITOR = nur zuschauen. Hier: Schaltvorgänge loggen (Stromzähler-Rauschen ignorieren). */
+    /** MONITOR = nur zuschauen. Hier: Schaltvorgänge von Lampen loggen. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void loggen(DeviceStateChangeEvent e) {
-        if (e.getDevice().getType() == DeviceType.POWER_METER || e.getOldValue() == null) return;
+        if (e.getDevice().getType() != DeviceType.LIGHT || e.getOldValue() == null) return;
         plugin.getLogger().info(e.getDevice().getName() + ": " + e.getKey() + " " + e.getOldValue() + " → " + e.getNewValue());
     }
 }
