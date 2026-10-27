@@ -1,0 +1,24 @@
+# ConnectLife API Connector – übernimmt die Anmeldung bei der Hisense-Cloud
+# und stellt im Heimnetz eine einfache HTTP-API für HomeX bereit (Port 8000).
+#
+# Projekt: https://github.com/bilan/connectlife-api-connector
+#
+# Starten:   docker compose up -d --build
+# Testen:    curl http://localhost:8000/api/devices
+
+services:
+  connectlife-bridge:
+    build:
+      context: https://github.com/bilan/connectlife-api-connector.git
+      args:
+        BUILD_FROM: alpine:3.20
+    container_name: connectlife-bridge
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      CONNECTLIFE_LOGIN: "deine-connectlife@email.de"
+      CONNECTLIFE_PASSWORD: "dein-connectlife-passwort"
+      LOG_LEVEL: "info"
+    # Nur die HTTP-API starten (MQTT braucht HomeX nicht)
+    command: ["/bin/ash", "-c", "php artisan serve --port=8000 --host=0.0.0.0"]

@@ -67,16 +67,24 @@ public final class HomeXServer implements HomeX {
                 + (System.currentTimeMillis() - t0) + " ms. Tippe 'help' für Befehle.");
     }
 
+    /**
+     * Liest Befehle von der Konsole in einem Hintergrund-Thread und wartet, bis HomeX gestoppt wird.
+     * (So beendet sich HomeX nach "stop" sofort, ohne auf eine weitere Eingabe zu warten.)
+     */
     void runConsole() {
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
-            String line;
-            while (running.get() && (line = in.readLine()) != null) {
-                if (!line.isBlank()) commandRegistry.dispatch(console, line);
+        Thread konsole = new Thread(() -> {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
+                String line;
+                while (running.get() && (line = in.readLine()) != null) {
+                    if (!line.isBlank()) commandRegistry.dispatch(console, line);
+                }
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Konsole beendet", e);
             }
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Konsole beendet", e);
-        }
-        // Ohne Konsole (z. B. als Dienst) einfach weiterlaufen, bis stop/Shutdown kommt
+            // Ohne Konsole (z. B. als Dienst mit </dev/null) läuft HomeX einfach weiter
+        }, "HomeX-Konsole");
+        konsole.setDaemon(true);
+        konsole.start();
         try { stopped.await(); } catch (InterruptedException ignored) {}
     }
 

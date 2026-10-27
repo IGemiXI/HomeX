@@ -15,6 +15,7 @@
         <module>homex-core</module>
         <module>homex-plugins/demo-licht</module>
         <module>homex-plugins/sma-solar</module>
+        <module>homex-plugins/hisense-klima</module>
     </modules>
 
     <properties>

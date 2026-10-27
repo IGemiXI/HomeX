@@ -108,10 +108,10 @@ public class SmaSolarPlugin extends JavaPlugin {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
             fehlerInFolge++;
-            geraet.offline(e.getMessage());
+            geraet.offline(grund(e));
             // nicht jede Sekunde das Log zumüllen: erster Fehler + dann alle 60 Versuche
             if (fehlerInFolge == 1 || fehlerInFolge % 60 == 0) {
-                getLogger().warning(q.name() + " nicht erreichbar (" + fehlerInFolge + "x): " + e.getMessage());
+                getLogger().warning(q.name() + " nicht erreichbar (" + fehlerInFolge + "x): " + grund(e));
             }
         }
     }
@@ -166,7 +166,7 @@ public class SmaSolarPlugin extends JavaPlugin {
                         s.sendMessage("Angemeldet! Refresh-Token ist gespeichert, Werte kommen gleich.");
                         abfragen();
                     } catch (Exception e) {
-                        s.sendMessage("Anmeldung fehlgeschlagen: " + e.getMessage());
+                        s.sendMessage("Anmeldung fehlgeschlagen: " + grund(e));
                     }
                 });
             }
@@ -209,5 +209,15 @@ public class SmaSolarPlugin extends JavaPlugin {
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Konnte " + key + " nicht speichern", e);
         }
+    }
+
+    /** Verständliche Fehlermeldung (manche Java-Exceptions haben keinen Text). */
+    static String grund(Throwable e) {
+        if (e instanceof java.net.ConnectException) return "keine Verbindung (Adresse/Port prüfen, läuft das Gerät?)";
+        if (e instanceof java.net.http.HttpTimeoutException || e instanceof java.net.SocketTimeoutException)
+            return "Zeitüberschreitung";
+        if (e instanceof java.net.UnknownHostException) return "Adresse unbekannt: " + e.getMessage();
+        String m = e.getMessage();
+        return m == null || m.isBlank() ? e.getClass().getSimpleName() : m;
     }
 }

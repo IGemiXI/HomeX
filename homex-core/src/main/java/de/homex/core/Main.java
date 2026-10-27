@@ -9,5 +9,6 @@ public final class Main {
         Runtime.getRuntime().addShutdownHook(new Thread(server::shutdown, "HomeX-Shutdown"));
         server.start();
         server.runConsole();   // blockiert, bis "stop" eingegeben wird
+        System.exit(0);        // übrige Threads (z. B. von Plugins) nicht auf sich warten lassen
     }
 }

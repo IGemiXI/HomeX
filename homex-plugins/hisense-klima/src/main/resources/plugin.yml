@@ -1,0 +1,5 @@
+name: HisenseKlima
+version: ${project.version}
+main: de.homex.hisense.HisenseKlimaPlugin
+author: Dennis
+description: Steuert Hisense-Klimaanlagen (ConnectLife) über den ConnectLife API Connector
