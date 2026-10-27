@@ -1,0 +1,8 @@
+# Jede HomeX-Plugin-JAR braucht diese Datei im Hauptverzeichnis der JAR.
+name: DemoLicht
+version: ${project.version}
+main: de.homex.demo.DemoLichtPlugin
+author: Dennis
+description: Beispiel-Plugin mit simulierten Lampen und Stromzähler
+# depend: [AnderesPlugin]      # muss vorhanden sein, wird vorher geladen
+# softdepend: [Optional]       # wird vorher geladen, falls vorhanden

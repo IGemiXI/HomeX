@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>de.homex</groupId>
+        <artifactId>homex-parent</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+    <artifactId>demo-licht</artifactId>
+    <name>HomeX Plugin: DemoLicht</name>
+
+    <dependencies>
+        <!-- "provided" = wird zur Laufzeit von HomeX bereitgestellt, NICHT ins Plugin gepackt -->
+        <dependency>
+            <groupId>de.homex</groupId>
+            <artifactId>homex-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>DemoLicht</finalName>
+        <resources>
+            <!-- ersetzt ${project.version} in plugin.yml -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+</project>
