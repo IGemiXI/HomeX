@@ -3,6 +3,8 @@ package de.homex.core;
 import de.homex.api.device.Device;
 import de.homex.api.device.DeviceRegistry;
 import de.homex.api.device.DeviceType;
+import de.homex.api.event.DeviceRegisterEvent;
+import de.homex.api.event.DeviceUnregisterEvent;
 import de.homex.api.event.EventBus;
 import de.homex.api.plugin.JavaPlugin;
 
@@ -28,21 +30,28 @@ final class SimpleDeviceRegistry implements DeviceRegistry {
             throw new IllegalArgumentException("Geräte-ID '" + device.getId() + "' ist schon vergeben (von "
                     + (existing.owner() == null ? "HomeX" : existing.owner().getName()) + ")");
         device.attach(bus);
+        bus.callEvent(new DeviceRegisterEvent(device, owner));
     }
 
     @Override
     public void unregister(String deviceId) {
         Entry e = devices.remove(deviceId);
-        if (e != null) e.device().attach(null);
+        if (e != null) {
+            e.device().attach(null);
+            bus.callEvent(new DeviceUnregisterEvent(e.device(), e.owner()));
+        }
     }
 
     @Override
     public void unregisterAll(JavaPlugin owner) {
+        List<Entry> entfernt = new java.util.ArrayList<>();
         devices.values().removeIf(e -> {
             if (e.owner() != owner) return false;
             e.device().attach(null);
+            entfernt.add(e);
             return true;
         });
+        entfernt.forEach(e -> bus.callEvent(new DeviceUnregisterEvent(e.device(), e.owner())));
     }
 
     @Override

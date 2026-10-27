@@ -1,0 +1,322 @@
+/* HomeX Dashboard – Neon auf Nacht-Navy.
+   Jede Leuchtfarbe hat genau eine Bedeutung:
+   Sonne = Orange, Netz/Kühlen = Blau, Batterie/HomeX = Violett, Heizen/Warnung = Magenta. */
+
+:root {
+  --nacht: #0A1024;
+  --flaeche: #121A36;
+  --flaeche-hoch: #18224A;
+  --linie: #26325E;
+  --text: #E8ECFF;
+  --text-leise: #8E98C4;
+
+  --sonne: #FF9A3C;
+  --netz: #3DA9FF;
+  --batterie: #9B6BFF;
+  --heiss: #FF3EA5;
+
+  --schrift-zahl: "Chakra Petch", "Bahnschrift", "DIN Alternate", system-ui, sans-serif;
+  --schrift-text: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --rand: 16px;
+  --breite: 1080px;
+  --radius-klein: 8px;
+  --radius-gross: 18px;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 520px at 50% -180px, rgba(155, 107, 255, .16), transparent 70%),
+    var(--nacht);
+  color: var(--text);
+  font: 400 1rem/1.5 var(--schrift-text);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+:focus-visible { outline: 2px solid var(--netz); outline-offset: 3px; border-radius: 4px; }
+
+code {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: .9em;
+  background: var(--flaeche-hoch);
+  padding: .1em .35em;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------ Kopf */
+
+.kopf {
+  max-width: var(--breite);
+  margin: 0 auto;
+  padding: calc(14px + env(safe-area-inset-top)) var(--rand) 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.marke {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text); text-decoration: none;
+  font: 700 1.35rem/1 var(--schrift-zahl);
+  letter-spacing: .02em;
+}
+.marke-hex { width: 34px; height: 34px; filter: drop-shadow(0 0 6px rgba(155, 107, 255, .6)); }
+
+.verbindung {
+  margin: 0 0 0 auto;
+  font-size: .875rem;
+  color: var(--text-leise);
+  display: flex; align-items: center; gap: 8px;
+}
+.verbindung::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-leise);
+}
+.verbindung[data-zustand="live"]::before { background: #3DFFA8; box-shadow: 0 0 8px #3DFFA8; }
+.verbindung[data-zustand="weg"]::before { background: var(--heiss); box-shadow: 0 0 8px var(--heiss); }
+
+.uhr { font: 500 1rem/1 var(--schrift-zahl); color: var(--text-leise); font-variant-numeric: tabular-nums; }
+
+main { max-width: var(--breite); margin: 0 auto; padding: 0 var(--rand); }
+
+/* -------------------------------------------------------- Energiefluss */
+
+.energie {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr);
+  gap: 8px 32px;
+  align-items: center;
+  padding: 8px 0 32px;
+}
+
+.fluss { width: 100%; height: auto; overflow: visible; }
+
+.fluss .leitung { fill: none; stroke: var(--linie); stroke-width: 2; }
+.fluss .strom {
+  fill: none; stroke-width: 3; stroke-linecap: round;
+  stroke-dasharray: 2 12;
+  opacity: 0;
+  transition: opacity .4s;
+}
+.fluss .strom.an { opacity: 1; animation: fliessen var(--dauer, 1.6s) linear infinite; }
+.fluss .strom.rueck { animation-direction: reverse; }
+@keyframes fliessen { to { stroke-dashoffset: -28; } }
+
+.fluss .knoten-form { fill: var(--flaeche); stroke-width: 2; }
+.fluss .haus .knoten-form { fill: var(--flaeche-hoch); stroke: var(--text); stroke-opacity: .35; }
+.fluss .wert { font: 600 22px/1 var(--schrift-zahl); fill: var(--text); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.fluss .haus .wert { font-size: 30px; }
+.fluss .name { font: 500 13px/1 var(--schrift-text); fill: var(--text-leise); text-anchor: middle; }
+.fluss .zusatz { font: 500 13px/1 var(--schrift-text); text-anchor: middle; }
+
+.sonne { --farbe: var(--sonne); }
+.netz { --farbe: var(--netz); }
+.batterie { --farbe: var(--batterie); }
+.fluss .sonne .knoten-form, .fluss .netz .knoten-form, .fluss .batterie .knoten-form { stroke: var(--farbe); }
+.fluss .aktiv .knoten-form { filter: drop-shadow(0 0 7px var(--farbe)); }
+.fluss .strom.sonne { stroke: var(--sonne); filter: drop-shadow(0 0 4px var(--sonne)); }
+.fluss .strom.netz { stroke: var(--netz); filter: drop-shadow(0 0 4px var(--netz)); }
+.fluss .strom.batterie { stroke: var(--batterie); filter: drop-shadow(0 0 4px var(--batterie)); }
+.fluss .zusatz.sonne { fill: var(--sonne); }
+.fluss .zusatz.netz { fill: var(--netz); }
+.fluss .zusatz.batterie { fill: var(--batterie); }
+
+.fakten { margin: 0; display: grid; gap: 14px; }
+.fakten div { border-left: 2px solid var(--farbe, var(--linie)); padding: 2px 0 2px 14px; }
+.fakten dt { color: var(--text-leise); font-size: .875rem; }
+.fakten dd { margin: 2px 0 0; font: 600 1.5rem/1.2 var(--schrift-zahl); font-variant-numeric: tabular-nums; }
+.fakten dd small { font: 500 .9rem var(--schrift-text); color: var(--text-leise); margin-left: 4px; }
+
+.leer { color: var(--text-leise); max-width: 60ch; }
+.leer.gross { font-size: 1.1rem; padding: 40px 0; }
+
+/* ------------------------------------------------------------ Bereiche */
+
+.bereich { padding: 8px 0 28px; border-top: 1px solid var(--linie); }
+.bereich h2 {
+  font: 600 1.25rem/1.2 var(--schrift-zahl);
+  margin: 20px 0 12px;
+  letter-spacing: .01em;
+}
+
+/* --------------------------------------------------------------- Klima */
+
+.klima-liste { display: grid; gap: 2px; }
+
+.klima {
+  --modus: var(--text-leise);
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) auto auto auto;
+  grid-template-areas:
+    "name ist soll schalter"
+    "modi modi modi luefter";
+  align-items: center;
+  gap: 12px 24px;
+  padding: 16px 18px;
+  background: var(--flaeche);
+  border-left: 3px solid var(--linie);
+}
+.klima:first-child { border-top-left-radius: var(--radius-gross); border-top-right-radius: var(--radius-gross); }
+.klima:last-child { border-bottom-left-radius: var(--radius-gross); border-bottom-right-radius: var(--radius-gross); }
+.klima.an { border-left-color: var(--modus); }
+.klima[data-modus="kuehlen"], .klima[data-modus="entfeuchten"] { --modus: var(--netz); }
+.klima[data-modus="heizen"] { --modus: var(--heiss); }
+.klima[data-modus="auto"] { --modus: var(--batterie); }
+.klima[data-modus="lueften"] { --modus: #7FD8FF; }
+.klima.offline { opacity: .55; }
+
+.klima-name { grid-area: name; min-width: 0; }
+.klima-name strong { display: block; font-weight: 600; font-size: 1.05rem; }
+.klima-name span { font-size: .875rem; color: var(--text-leise); }
+.klima.an .klima-name span { color: var(--modus); }
+
+.klima-ist { grid-area: ist; font: 600 2.4rem/1 var(--schrift-zahl); font-variant-numeric: tabular-nums; }
+.klima-ist small { font-size: .45em; color: var(--text-leise); margin-left: 2px; }
+
+.soll { grid-area: soll; display: flex; align-items: center; gap: 4px; }
+.soll output { min-width: 4.2ch; text-align: center; font: 600 1.25rem/1 var(--schrift-zahl); font-variant-numeric: tabular-nums; }
+.soll output small { display: block; font: 400 .7rem var(--schrift-text); color: var(--text-leise); margin-top: 3px; }
+
+.rund {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--linie); background: var(--flaeche-hoch);
+  color: var(--text); font: 600 1.25rem/1 var(--schrift-zahl);
+  cursor: pointer;
+}
+.rund:hover { border-color: var(--modus); }
+.rund:disabled { opacity: .4; cursor: default; }
+
+.schalter { grid-area: schalter; justify-self: end; }
+
+.modi { grid-area: modi; display: flex; flex-wrap: wrap; gap: 6px; }
+.modi button {
+  border: 1px solid var(--linie); background: transparent; color: var(--text-leise);
+  padding: 7px 12px; border-radius: 999px; font: 500 .875rem var(--schrift-text); cursor: pointer;
+}
+.modi button[aria-pressed="true"] { color: var(--text); border-color: var(--modus); background: color-mix(in srgb, var(--modus) 18%, transparent); }
+.modi button:disabled { cursor: default; }
+
+.luefter { grid-area: luefter; justify-self: end; display: flex; align-items: center; gap: 8px; font-size: .875rem; color: var(--text-leise); }
+
+select {
+  background: var(--flaeche-hoch); color: var(--text);
+  border: 1px solid var(--linie); border-radius: var(--radius-klein);
+  padding: 7px 10px; font: 500 .875rem var(--schrift-text);
+}
+
+/* Schalter (An/Aus) */
+.schalter-knopf {
+  --farbe-an: var(--modus, var(--netz));
+  position: relative; width: 56px; height: 32px;
+  border-radius: 999px; border: 1px solid var(--linie);
+  background: var(--flaeche-hoch); cursor: pointer; padding: 0;
+}
+.schalter-knopf::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--text-leise);
+  transition: transform .18s ease, background .18s;
+}
+.schalter-knopf[aria-checked="true"] { border-color: var(--farbe-an); background: color-mix(in srgb, var(--farbe-an) 30%, var(--flaeche-hoch)); }
+.schalter-knopf[aria-checked="true"]::after { transform: translateX(24px); background: var(--text); box-shadow: 0 0 10px var(--farbe-an); }
+.schalter-knopf:disabled { opacity: .5; cursor: default; }
+
+/* --------------------------------------------------------------- Licht */
+
+.licht-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.licht {
+  --modus: var(--sonne);
+  display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  padding: 14px 16px; background: var(--flaeche); border-radius: var(--radius-klein);
+}
+.licht strong { font-weight: 600; }
+.licht input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--sonne); }
+.licht.aus input[type="range"] { opacity: .4; }
+
+/* ------------------------------------------------------ Weitere Geräte */
+
+.weitere-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.geraet { padding: 14px 16px; background: var(--flaeche); border-radius: var(--radius-klein); }
+.geraet strong { display: block; font-weight: 600; margin-bottom: 6px; }
+.geraet dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .875rem; }
+.geraet dt { color: var(--text-leise); }
+.geraet dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- Fuß */
+
+.fuss {
+  max-width: var(--breite); margin: 0 auto; padding: 24px var(--rand) 40px;
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between;
+  color: var(--text-leise); font-size: .875rem; border-top: 1px solid var(--linie);
+}
+.fuss p { margin: 0; }
+.link { background: none; border: 0; color: var(--text-leise); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
+
+/* -------------------------------------------------------------- Login */
+
+.login {
+  border: 1px solid var(--linie); border-radius: var(--radius-gross);
+  background: var(--flaeche); color: var(--text);
+  width: min(420px, calc(100vw - 32px)); padding: 28px;
+}
+.login::backdrop { background: rgba(5, 8, 20, .82); backdrop-filter: blur(4px); }
+.login h2 { font: 600 1.4rem/1.2 var(--schrift-zahl); margin: 0 0 8px; }
+.login p { color: var(--text-leise); font-size: .95rem; margin: 0 0 18px; }
+.login label { display: block; font-weight: 500; margin-bottom: 6px; }
+.login input {
+  width: 100%; padding: 12px 14px; font: 500 1rem var(--schrift-text);
+  background: var(--nacht); color: var(--text);
+  border: 1px solid var(--linie); border-radius: var(--radius-klein); margin-bottom: 14px;
+}
+.fehler { color: var(--heiss) !important; }
+.knopf {
+  width: 100%; padding: 12px; border: 0; border-radius: var(--radius-klein); cursor: pointer;
+  font: 600 1rem var(--schrift-text); color: #fff;
+  background: linear-gradient(100deg, var(--netz), var(--batterie) 55%, var(--heiss));
+}
+
+/* ------------------------------------------------------------ Hinweis */
+
+.hinweis {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie); border-left: 3px solid var(--heiss);
+  padding: 12px 16px; border-radius: var(--radius-klein); max-width: calc(100vw - 32px);
+  transition: opacity .2s, transform .2s;
+}
+.hinweis.zeigen { opacity: 1; transform: translate(-50%, 0); }
+
+/* -------------------------------------------------------------- Handy */
+
+@media (max-width: 760px) {
+  .energie { grid-template-columns: 1fr; padding-bottom: 20px; }
+  .fakten { grid-template-columns: 1fr 1fr; }
+  .klima {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name schalter"
+      "ist soll"
+      "modi modi"
+      "luefter luefter";
+    padding: 16px;
+  }
+  .luefter { justify-self: start; }
+  .uhr { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluss .strom.an { animation: none; stroke-dasharray: 6 6; }
+  .schalter-knopf::after, .hinweis { transition: none; }
+}

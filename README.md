@@ -3,6 +3,8 @@
 Aufgebaut wie ein Spigot-Server: `HomeX.jar` starten, alle `.jar`-Dateien im Ordner `plugins/`
 werden beim Start geladen und über `onLoad()` → `onEnable()` → `onDisable()` gesteuert.
 
+![HomeX Dashboard](docs/dashboard-desktop.png)
+
 ## Projektaufbau
 
 ```
@@ -25,7 +27,8 @@ homex/
 └── homex-plugins/
     ├── demo-licht/       Beispiel-Plugin → baut DemoLicht.jar
     ├── sma-solar/        SMA-Wechselrichter (Modbus/Cloud) → baut SmaSolar.jar
-    └── hisense-klima/    Hisense-Klimas (ConnectLife) → baut HisenseKlima.jar
+    ├── hisense-klima/    Hisense-Klimas (ConnectLife) → baut HisenseKlima.jar
+    └── web-api/          REST-API + Dashboard (PWA) → baut WebAPI.jar
 ```
 
 ## Bauen & Starten
@@ -153,7 +156,9 @@ public class MeinListener implements Listener {
 
 - [`SmaSolar`](homex-plugins/sma-solar/README.md) – Sunny Tripower per Modbus TCP oder SMA Cloud-API
 - [`HisenseKlima`](homex-plugins/hisense-klima/README.md) – Hisense-Klimas (ConnectLife) steuern
+- [`WebAPI`](homex-plugins/web-api/README.md) – REST-API mit Live-Updates und das HomeX-Dashboard
 
 ## Ideen für die nächsten Plugins
 
-- `WebUI` – HTTP-Server + REST-API, über die die PWA alle Geräte aus der `DeviceRegistry` anzeigt
+- `Automation` – Regeln wie „Klima an, wenn die Einspeisung über 2000 W liegt“
+- `Verlauf` – Messwerte speichern und als Diagramm im Dashboard zeigen

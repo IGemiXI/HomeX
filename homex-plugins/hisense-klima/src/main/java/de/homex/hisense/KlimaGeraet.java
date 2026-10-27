@@ -111,9 +111,11 @@ public final class KlimaGeraet extends Device {
 
     /** Text aus der Konsole/UI → HomeX-Wert, oder null wenn ungültig. */
     private Object parsen(String key, String v) {
-        String s = v.trim().toLowerCase(Locale.ROOT).replace('ü', 'u').replace("ue", "u");
+        String roh = v.trim().toLowerCase(Locale.ROOT);
+        // Umlaute vereinheitlichen ("kühlen" = "kuehlen" = "kuhlen") – nur für Modus-Namen
+        String s = roh.replace('ü', 'u').replace("ue", "u");
         return switch (key) {
-            case "power", "eco", "turbo", "leise" -> switch (s) {
+            case "power", "eco", "turbo", "leise" -> switch (roh) {
                 case "an", "on", "true", "1", "ein" -> Boolean.TRUE;
                 case "aus", "off", "false", "0" -> Boolean.FALSE;
                 default -> null;
@@ -127,7 +129,7 @@ public final class KlimaGeraet extends Device {
                         case "fan" -> "lueften";
                         default -> null;
                     });
-            case "luefter" -> LUEFTER.values().stream().filter(l -> l.equals(s.replace(' ', '_'))).findFirst().orElse(null);
+            case "luefter" -> LUEFTER.values().stream().filter(l -> l.equals(roh.replace(' ', '_'))).findFirst().orElse(null);
             case "solltemp" -> {
                 try {
                     long t = Math.round(Double.parseDouble(v.replace(',', '.')));

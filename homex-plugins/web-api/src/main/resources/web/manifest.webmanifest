@@ -1,0 +1,16 @@
+{
+  "name": "HomeX Smarthome",
+  "short_name": "HomeX",
+  "description": "Dein HomeX-Smarthome: Energie, Klima und Licht",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0A1024",
+  "theme_color": "#0A1024",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

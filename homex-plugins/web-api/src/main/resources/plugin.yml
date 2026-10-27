@@ -1,0 +1,5 @@
+name: WebAPI
+version: ${project.version}
+main: de.homex.web.WebApiPlugin
+author: Dennis
+description: REST-API mit Live-Updates und das HomeX-Dashboard (PWA)
