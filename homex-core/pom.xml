@@ -25,20 +25,23 @@
             <!-- Packt API + Core in EINE ausführbare HomeX.jar (wie spigot.jar) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.3</version>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <appendAssemblyId>false</appendAssemblyId>   <!-- Ergebnis heißt einfach HomeX.jar -->
+                    <archive>
+                        <manifest>
+                            <mainClass>de.homex.core.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
                 <executions>
                     <execution>
+                        <id>homex-jar</id>
                         <phase>package</phase>
-                        <goals><goal>shade</goal></goals>
-                        <configuration>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>de.homex.core.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
+                        <goals><goal>single</goal></goals>
                     </execution>
                 </executions>
             </plugin>

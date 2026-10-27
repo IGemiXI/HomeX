@@ -29,7 +29,7 @@ homex/
 
 ## Bauen & Starten
 
-Voraussetzung: Java 17+ und Maven.
+Voraussetzung: Java 25 (JDK) und Maven 3.6.3 oder neuer.
 
 ```bash
 mvn package
