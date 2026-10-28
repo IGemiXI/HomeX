@@ -52,7 +52,15 @@ public class SmaSolarPlugin extends JavaPlugin {
         long intervall;
 
         if (art.equals("cloud")) {
-            quelle = cloudQuelle(c);
+            CloudQuelle cq = cloudQuelle(c);
+            quelle = cq;
+            String fehlt = cq.fehlendeEinrichtung();
+            if (fehlt != null) {
+                // Nichts abfragen, solange der Zugang fehlt – HomeX läuft trotzdem ganz normal weiter
+                geraet.wartet(fehlt);
+                getLogger().info("Quelle: SMA Cloud – " + fehlt + ". Die Solaranlage wird abgefragt, sobald das erledigt ist.");
+                return;
+            }
             intervall = zahl(c, "intervall.cloud", 300);
             if (intervall < 60) {
                 getLogger().warning("intervall.cloud ist sehr kurz – SMA hat ein Rate-Limit. Setze auf 60 s.");
@@ -128,6 +136,10 @@ public class SmaSolarPlugin extends JavaPlugin {
                 geraet.getStates().forEach((k, v) -> s.sendMessage(String.format("  %-20s %s", k, v)));
             }
             case "jetzt" -> {
+                if (abfrage == null) {
+                    s.sendMessage("Die Solaranlage wird noch nicht abgefragt: " + geraet.getState("fehler"));
+                    return true;
+                }
                 getHomeX().getScheduler().runAsync(this, () -> {
                     abfragen();
                     s.sendMessage("Aktualisiert: " + geraet.getStates());
@@ -164,7 +176,7 @@ public class SmaSolarPlugin extends JavaPlugin {
                     try {
                         cq.codeEinloesen(a[1]);
                         s.sendMessage("Angemeldet! Refresh-Token ist gespeichert, Werte kommen gleich.");
-                        abfragen();
+                        quelleStarten();
                     } catch (Exception e) {
                         s.sendMessage("Anmeldung fehlgeschlagen: " + grund(e));
                     }

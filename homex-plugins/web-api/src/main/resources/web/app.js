@@ -359,10 +359,15 @@ function strom(pfad, watt, rueckwaerts) {
 }
 
 function energieZeichnen(solar) {
-  const s = solar ? solar.states : null;
+  const wartet = solar && solar.states.status === "WARTET";
+  const s = solar && !wartet ? solar.states : null;
   $("fluss").style.display = s ? "" : "none";
   $("energie-fakten").hidden = !s;
-  $("energie-leer").hidden = !!s;
+  const leer = $("energie-leer");
+  leer.hidden = !!s;
+  leer.textContent = wartet
+    ? `Die Solaranlage ist angelegt und ${solar.states.fehler || "wartet auf ihren Zugang"}. Sobald die Daten da sind, siehst du hier den Energiefluss.`
+    : "Noch keine Solaranlage verbunden. Sobald das Plugin SmaSolar Werte liefert, siehst du hier den Energiefluss.";
   if (!s) return;
 
   const pv = s.pv_w ?? s.ac_w;

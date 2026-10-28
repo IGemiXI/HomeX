@@ -49,6 +49,15 @@ final class CloudQuelle implements SmaQuelle {
 
     boolean istAngemeldet() { return refreshToken != null; }
 
+    /** Was noch fehlt, damit die Cloud abgefragt werden kann – oder null, wenn alles da ist. */
+    String fehlendeEinrichtung() {
+        if (leer(cfg.clientId()) || leer(cfg.clientSecret()))
+            return "wartet auf SMA-Zugangsdaten (cloud.client-id / cloud.client-secret)";
+        if (leer(cfg.plantId())) return "cloud.plant-id fehlt in der Config";
+        if (!istAngemeldet()) return "noch nicht bei SMA angemeldet ('sma login' in der Konsole)";
+        return null;
+    }
+
     // ------------------------------------------------------------------
     // Login (Authorization Code Flow)
     // ------------------------------------------------------------------

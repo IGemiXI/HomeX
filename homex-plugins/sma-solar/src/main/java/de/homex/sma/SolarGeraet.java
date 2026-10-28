@@ -41,6 +41,12 @@ public final class SolarGeraet extends Device {
         if (getState("fehler") != null) updateState("fehler", "-");
     }
 
+    /** Quelle ist noch nicht eingerichtet (z. B. Zugangsdaten fehlen) – kein Fehler, nur ein Hinweis. */
+    void wartet(String grund) {
+        updateState("status", "WARTET");
+        updateState("fehler", grund);
+    }
+
     void offline(String grund) {
         updateState("status", "OFFLINE");
         updateState("fehler", grund);
