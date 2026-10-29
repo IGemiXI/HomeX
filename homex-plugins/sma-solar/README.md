@@ -12,7 +12,8 @@ Es gibt zwei Quellen. Du schaltest in `plugins/SmaSolar/config.properties` oder 
 ## Modbus einrichten
 
 1. Öffne im Browser die IP des Wechselrichters und melde dich **als Installateur** an.
-2. Unter *Gerätekonfiguration → Kommunikation → Modbus* den **TCP-Server aktivieren**, Port 502, speichern.
+2. Unter *Geräteparameter → Externe Kommunikation → Modbus* den **TCP-Server** einschalten (Port 502) und speichern.
+   Dafür brauchst du kein OK von SMA, nur das Installateur-Passwort. Das legt der Installateur bei der Inbetriebnahme fest.
 3. Setze in der Config `modbus.host` auf die IP des Wechselrichters. Am besten vergibst du ihm im Router eine feste IP.
 4. Die Unit-ID ist bei SMA standardmäßig `3`.
 
