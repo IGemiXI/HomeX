@@ -1,6 +1,6 @@
 /* Service Worker: hält die Oberfläche offline verfügbar. API-Daten werden NIE zwischengespeichert. */
-const CACHE = "homex-v1";
-const SHELL = ["./", "index.html", "app.css", "app.js", "icon.svg", "manifest.webmanifest"];
+const CACHE = "homex-v2";
+const SHELL = ["./", "index.html", "app.css", "app.js", "icons.js", "charts.js", "icon.svg", "manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -1,0 +1,30 @@
+# ======================================================================
+#  Regeln – HomeX handelt selbst.  Eine Regel pro Zeile:
+#
+#  regel <Name> | <Wann> | <Was>
+#
+#  Wann:
+#    um 06:45                       jeden Tag
+#    um 06:45 werktags              Mo–Fr   (auch: wochenende, mo,di,mi …)
+#    bei sonnenuntergang            braucht den Standort in homex.properties
+#    bei sonnenaufgang +30 min      (+/- Minuten Versatz)
+#    wenn solar.einspeisung_w > 2000 für 10 min
+#    wenn licht-flur.power = an
+#         Vergleiche: >  <  >=  <=  =  !=     Werte: Zahl, an/aus, Text
+#
+#  Was:  ein Befehl wie in szenen.txt oder "szene <Name>",
+#        mehrere mit ; getrennt
+#
+#  Ein-/Ausschalten geht im Dashboard (Automation) oder in der Konsole:
+#    regel Morgenlicht aus
+# ======================================================================
+
+regel Morgenlicht | um 06:30 werktags | licht-kueche power an; steckdose-kaffee power an
+regel Außenlicht abends | bei sonnenuntergang | licht-aussen power an
+regel Außenlicht nachts aus | um 23:30 | licht-aussen power aus
+regel Gute Nacht | um 23:45 | szene Gute Nacht
+regel Flurlicht nicht vergessen | wenn licht-flur.power = an für 30 min | licht-flur power aus
+
+# Vorbereitet für später (im Dashboard erst einschalten, wenn Solar und Klima laufen):
+regel Solarstrom zum Kühlen | wenn solar.einspeisung_w > 2000 für 10 min | klima-wohnzimmer power an
+regel Kühlen beenden | wenn solar.einspeisung_w < 300 für 15 min | klima-wohnzimmer power aus

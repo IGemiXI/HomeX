@@ -1,0 +1,5 @@
+name: Wetter
+version: ${project.version}
+main: de.homex.wetter.WetterPlugin
+author: Dennis
+description: Wetter, Vorhersage und Sonnenprognose von Open-Meteo (kostenlos, ohne Anmeldung)

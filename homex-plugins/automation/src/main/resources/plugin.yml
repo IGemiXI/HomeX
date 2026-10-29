@@ -1,0 +1,5 @@
+name: Automation
+version: ${project.version}
+main: de.homex.automation.AutomationPlugin
+author: Dennis
+description: Szenen und Regeln (Zeit, Sonnenauf-/-untergang, Bedingungen)

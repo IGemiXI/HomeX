@@ -80,6 +80,8 @@ public class HisenseKlimaPlugin extends JavaPlugin {
         if (id.isEmpty()) id = freieId("klima-" + slug(s.name()));
         try {
             KlimaGeraet k = new KlimaGeraet(id, name, s.puid(), bridge, tempMin, tempMax, getLogger());
+            // Raum: aus der Config (raum.<puid>) oder der Name aus der ConnectLife-App
+            k.setRoom(c.getProperty("raum." + s.puid(), s.name()).trim());
             getHomeX().getDeviceRegistry().register(k, this);
             getLogger().info("Klima gefunden: " + name + " → " + id + " (puid " + s.puid() + ")");
             return k;

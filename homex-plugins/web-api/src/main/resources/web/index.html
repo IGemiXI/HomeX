@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>HomeX</title>
-  <meta name="description" content="HomeX Smarthome-Dashboard">
-  <meta name="theme-color" content="#0A1024">
+  <meta name="description" content="HomeX – dein Smarthome">
+  <meta name="theme-color" content="#060A1A">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
@@ -13,82 +13,80 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header class="kopf">
-    <a class="marke" href="./" aria-label="HomeX Startseite">
-      <svg class="marke-hex" viewBox="0 0 48 48" aria-hidden="true">
-        <defs>
-          <linearGradient id="markeVerlauf" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#3DA9FF"/>
-            <stop offset=".45" stop-color="#9B6BFF"/>
-            <stop offset=".75" stop-color="#FF3EA5"/>
-            <stop offset="1" stop-color="#FF9A3C"/>
-          </linearGradient>
-        </defs>
-        <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="none" stroke="url(#markeVerlauf)" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M17 16 31 32M31 16 17 32" stroke="url(#markeVerlauf)" stroke-width="3.2" stroke-linecap="round"/>
-      </svg>
-      <span>HomeX</span>
-    </a>
-    <p id="verbindung" class="verbindung" data-zustand="start" role="status">Verbinde …</p>
-    <time id="uhr" class="uhr"></time>
-  </header>
+  <a class="sprung" href="#inhalt">Zum Inhalt springen</a>
 
-  <main>
-    <section id="energie" class="energie" aria-labelledby="energie-titel">
-      <h1 id="energie-titel" class="sr-only">Energie</h1>
-      <svg id="fluss" class="fluss" viewBox="0 0 420 300" role="img" aria-labelledby="fluss-text">
-        <title id="fluss-text">Energiefluss im Haus</title>
-      </svg>
-      <dl id="energie-fakten" class="fakten"></dl>
-      <p id="energie-leer" class="leer" hidden>
-        Noch keine Solaranlage verbunden. Sobald das Plugin SmaSolar Werte liefert, siehst du hier den Energiefluss.
-      </p>
-    </section>
+  <div class="app">
+    <!-- Navigation: links auf großen Bildschirmen, unten auf dem Handy -->
+    <nav class="nav" aria-label="Hauptnavigation">
+      <a class="marke" href="#/" aria-label="HomeX Übersicht">
+        <svg class="marke-hex" viewBox="0 0 48 48" aria-hidden="true">
+          <defs>
+            <linearGradient id="markeNeon" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#3DB2FF"/>
+              <stop offset=".45" stop-color="#9D72FF"/>
+              <stop offset=".75" stop-color="#FF4FB0"/>
+              <stop offset="1" stop-color="#FFA24A"/>
+            </linearGradient>
+            <linearGradient id="markeMetall" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2A3566"/>
+              <stop offset=".5" stop-color="#141B3D"/>
+              <stop offset="1" stop-color="#222C58"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="url(#markeMetall)" stroke="url(#markeNeon)" stroke-width="2.6" stroke-linejoin="round"/>
+          <path d="M17.5 16.5 30.5 31.5M30.5 16.5 17.5 31.5" stroke="url(#markeNeon)" stroke-width="3.2" stroke-linecap="round"/>
+        </svg>
+        <span>HomeX</span>
+      </a>
+      <ul id="nav-liste" class="nav-liste"></ul>
+      <p id="nav-status" class="nav-status" data-zustand="start" role="status">Verbinde …</p>
+    </nav>
 
-    <section id="klima" class="bereich" aria-labelledby="klima-titel" hidden>
-      <h2 id="klima-titel">Klima</h2>
-      <div id="klima-liste" class="klima-liste"></div>
-    </section>
+    <main id="inhalt" class="inhalt" tabindex="-1">
+      <div id="seite"></div>
+    </main>
+  </div>
 
-    <section id="licht" class="bereich" aria-labelledby="licht-titel" hidden>
-      <h2 id="licht-titel">Licht</h2>
-      <div id="licht-liste" class="licht-liste"></div>
-    </section>
+  <!-- Detailansicht eines Geräts -->
+  <dialog id="blatt" class="blatt" aria-labelledby="blatt-titel">
+    <div class="blatt-griff" aria-hidden="true"></div>
+    <header class="blatt-kopf">
+      <div id="blatt-symbol" class="blatt-symbol" aria-hidden="true"></div>
+      <div>
+        <h2 id="blatt-titel"></h2>
+        <p id="blatt-unter"></p>
+      </div>
+      <button id="blatt-zu" class="rund-knopf" type="button" aria-label="Schließen"></button>
+    </header>
+    <div id="blatt-inhalt" class="blatt-inhalt"></div>
+    <footer id="blatt-fuss" class="blatt-fuss"></footer>
+  </dialog>
 
-    <section id="weitere" class="bereich" aria-labelledby="weitere-titel" hidden>
-      <h2 id="weitere-titel">Weitere Geräte</h2>
-      <div id="weitere-liste" class="weitere-liste"></div>
-    </section>
-
-    <p id="nichts" class="leer gross" hidden>
-      HomeX läuft, aber es ist noch kein Gerät angemeldet. Lege Plugins wie SmaSolar oder HisenseKlima in den Ordner
-      <code>plugins/</code> und starte HomeX neu.
-    </p>
-  </main>
-
-  <footer class="fuss">
-    <p id="plugins"></p>
-    <button id="abmelden" class="link" type="button">Abmelden</button>
-  </footer>
-
+  <!-- Anmeldung -->
   <dialog id="login" class="login" aria-labelledby="login-titel">
     <form id="login-form" method="dialog">
+      <svg class="login-hex" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="none" stroke="url(#markeNeon)" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M17.5 16.5 30.5 31.5M30.5 16.5 17.5 31.5" stroke="url(#markeNeon)" stroke-width="3.2" stroke-linecap="round"/>
+      </svg>
       <h2 id="login-titel">Bei HomeX anmelden</h2>
-      <p>Den Zugangsschlüssel findest du im HomeX-Log beim Start oder in
+      <p>Den Zugangsschlüssel zeigt HomeX beim Start in der Konsole. Er steht auch in
         <code>plugins/WebAPI/config.properties</code> unter <code>token</code>.</p>
       <label for="token">Zugangsschlüssel</label>
       <input id="token" name="token" type="password" autocomplete="current-password" required spellcheck="false">
       <p id="login-fehler" class="fehler" role="alert" hidden></p>
-      <button class="knopf" type="submit">Anmelden</button>
+      <button class="knopf haupt" type="submit">Anmelden</button>
     </form>
   </dialog>
 
-  <div id="hinweis" class="hinweis" role="status" aria-live="polite"></div>
+  <div id="meldung" class="meldung" role="status" aria-live="polite"></div>
 
+  <script src="icons.js"></script>
+  <script src="charts.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

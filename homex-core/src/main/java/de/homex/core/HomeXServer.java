@@ -1,6 +1,8 @@
 package de.homex.core;
 
 import de.homex.api.HomeX;
+import de.homex.api.Location;
+import de.homex.api.device.ControlSource;
 import de.homex.api.command.CommandSender;
 import de.homex.api.device.Device;
 import de.homex.api.plugin.JavaPlugin;
@@ -17,6 +19,11 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.util.Optional;
+import java.util.Properties;
 
 public final class HomeXServer implements HomeX {
 
@@ -31,6 +38,7 @@ public final class HomeXServer implements HomeX {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final CountDownLatch stopped = new CountDownLatch(1);
+    private final Properties settings = new Properties();
 
     private final CommandSender console = new CommandSender() {
         @Override public String getName() { return "Konsole"; }
@@ -39,6 +47,7 @@ public final class HomeXServer implements HomeX {
 
     HomeXServer(Path baseDir) {
         setupLogging();
+        einstellungenLaden(baseDir.resolve("homex.properties"));
         this.eventBus = new SimpleEventBus(logger);
         this.deviceRegistry = new SimpleDeviceRegistry(eventBus);
         this.scheduler = new SimpleScheduler(logger);
@@ -76,7 +85,10 @@ public final class HomeXServer implements HomeX {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
                 String line;
                 while (running.get() && (line = in.readLine()) != null) {
-                    if (!line.isBlank()) commandRegistry.dispatch(console, line);
+                    if (!line.isBlank()) {
+                        String befehl = line;
+                        ControlSource.run("Konsole", () -> commandRegistry.dispatch(console, befehl));
+                    }
                 }
             } catch (IOException e) {
                 logger.log(Level.SEVERE, "Konsole beendet", e);
@@ -167,8 +179,8 @@ public final class HomeXServer implements HomeX {
             var all = deviceRegistry.getAll();
             if (all.isEmpty()) { s.sendMessage("Keine Geräte registriert."); return true; }
             for (Device d : all) {
-                s.sendMessage(String.format("  %-20s %-15s %-25s %s  [%s]", d.getId(), d.getType(), d.getName(),
-                        d.getStates(), deviceRegistry.ownerName(d)));
+                s.sendMessage(String.format("  %-24s %-14s %-24s %-14s %s  [%s]", d.getId(), d.getType(), d.getName(),
+                        d.getRoom() == null ? "-" : d.getRoom(), d.getStates(), deviceRegistry.ownerName(d)));
             }
             return true;
         }, null);
@@ -177,7 +189,7 @@ public final class HomeXServer implements HomeX {
             if (a.length != 3) return false;
             deviceRegistry.get(a[0]).ifPresentOrElse(d -> {
                 if (d.control(a[1], a[2])) s.sendMessage(d.getId() + " → " + d.getStates());
-                else s.sendMessage(d.getId() + " versteht '" + a[1] + "=" + a[2] + "' nicht oder es wurde blockiert.");
+                else s.sendMessage(d.getId() + ": '" + a[1] + " " + a[2] + "' wurde nicht ausgeführt (ungültig, blockiert oder Gerät nicht erreichbar).");
             }, () -> s.sendMessage("Gerät nicht gefunden: " + a[0]));
             return true;
         }, null);
@@ -194,6 +206,42 @@ public final class HomeXServer implements HomeX {
 
     @Override public String getName() { return "HomeX"; }
     @Override public String getVersion() { return VERSION; }
+
+    @Override
+    public String getSetting(String key, String standard) {
+        String v = settings.getProperty(key);
+        return v == null || v.isBlank() ? standard : v.trim();
+    }
+
+    @Override
+    public Optional<Location> getLocation() {
+        try {
+            String lat = getSetting("standort.breitengrad", null), lon = getSetting("standort.laengengrad", null);
+            if (lat == null || lon == null) return Optional.empty();
+            return Optional.of(new Location(Double.parseDouble(lat.replace(',', '.')),
+                    Double.parseDouble(lon.replace(',', '.'))));
+        } catch (IllegalArgumentException e) {
+            logger.warning("homex.properties: Standort ungültig – " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /** Liest homex.properties; legt sie mit Erklärungen an, wenn sie fehlt. */
+    private void einstellungenLaden(Path datei) {
+        try {
+            if (!Files.exists(datei)) {
+                try (var in = getClass().getResourceAsStream("/homex.properties")) {
+                    if (in != null) Files.copy(in, datei);
+                }
+                logger.info("homex.properties angelegt – dort kannst du Hausname und Standort eintragen.");
+            }
+            try (Reader r = Files.newBufferedReader(datei, StandardCharsets.UTF_8)) {
+                settings.load(r);
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "homex.properties nicht lesbar", e);
+        }
+    }
     @Override public Logger getLogger() { return logger; }
     @Override public SimplePluginManager getPluginManager() { return pluginManager; }
     @Override public SimpleEventBus getEventBus() { return eventBus; }

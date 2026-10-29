@@ -6,6 +6,7 @@ import de.homex.api.event.EventBus;
 import de.homex.api.plugin.PluginManager;
 import de.homex.api.scheduler.Scheduler;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
@@ -29,6 +30,15 @@ public interface HomeX {
     Scheduler getScheduler();
 
     CommandRegistry getCommandRegistry();
+
+    /**
+     * Ein Wert aus der zentralen {@code homex.properties} im HomeX-Ordner
+     * (z. B. {@code haus.name}). Gibt {@code standard} zurück, wenn er fehlt oder leer ist.
+     */
+    String getSetting(String key, String standard);
+
+    /** Standort des Hauses aus {@code homex.properties} ({@code standort.breitengrad/laengengrad}), falls gesetzt. */
+    Optional<Location> getLocation();
 
     /** Fährt HomeX sauber herunter (alle Plugins werden deaktiviert). */
     void shutdown();

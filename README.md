@@ -5,6 +5,10 @@ werden beim Start geladen und über `onLoad()` → `onEnable()` → `onDisable()
 
 ![HomeX Dashboard](docs/dashboard-desktop.png)
 
+| Energie (mit Testdaten) | Automation | Handy |
+|---|---|---|
+| ![Energie](docs/dashboard-energie.png) | ![Automation](docs/dashboard-automation.png) | ![Handy](docs/dashboard-handy.png) |
+
 ## Projektaufbau
 
 ```
@@ -25,7 +29,9 @@ homex/
 │       ├── PluginClassLoader         Eigener ClassLoader pro Plugin
 │       └── DescriptionParser         Liest plugin.yml (ohne externe Bibliothek)
 └── homex-plugins/
-    ├── demo-licht/       Beispiel-Plugin → baut DemoLicht.jar
+    ├── dummy-geraete/    Test-Geräte mit Konsolen-Feedback → baut DummyGeraete.jar
+    ├── automation/       Szenen und Regeln → baut Automation.jar
+    ├── wetter/           Wetter + Sonnenprognose (Open-Meteo) → baut Wetter.jar
     ├── sma-solar/        SMA-Wechselrichter (Modbus/Cloud) → baut SmaSolar.jar
     ├── hisense-klima/    Hisense-Klimas (ConnectLife) → baut HisenseKlima.jar
     └── web-api/          REST-API + Dashboard (PWA) → baut WebAPI.jar
@@ -40,7 +46,7 @@ mvn package
 
 mkdir -p server/plugins
 cp homex-core/target/HomeX.jar server/
-cp homex-plugins/demo-licht/target/DemoLicht.jar server/plugins/
+cp homex-plugins/*/target/*.jar server/plugins/
 cd server
 java -jar HomeX.jar
 ```
@@ -48,6 +54,13 @@ java -jar HomeX.jar
 Oder einfach `start.bat` (Windows) bzw. `./start.sh` (Linux/Mac) – das baut und startet in einem Rutsch.
 
 > Umlaute kaputt in der Windows-Konsole? Vorher `chcp 65001` eingeben.
+
+### homex.properties
+
+Beim ersten Start legt HomeX neben der `HomeX.jar` eine `homex.properties` an. Dort stehen der **Name deines
+Zuhauses** und der **Standort** (Breiten- und Längengrad). Den Standort brauchen das Wetter-Plugin und Regeln
+mit Sonnenauf- und -untergang. Deine Koordinaten bekommst du in Google Maps: Rechtsklick auf dein Haus, die
+erste Zeile sind die Zahlen.
 
 ## Konsolenbefehle
 
@@ -58,8 +71,14 @@ Oder einfach `start.bat` (Windows) bzw. `./start.sh` (Linux/Mac) – das baut un
 | `plugin <name>` | Infos zu einem Plugin |
 | `enable <plugin>` / `disable <plugin>` | Plugin zur Laufzeit an-/ausschalten |
 | `reload` | alle Plugins entladen, `plugins/` neu einlesen, wieder aktivieren |
-| `devices` | alle Geräte mit Zustand |
-| `device <id> <schlüssel> <wert>` | Gerät steuern, z. B. `device licht-kueche power on` |
+| `devices` | alle Geräte mit Raum und Zustand |
+| `device <id> <schlüssel> <wert>` | Gerät steuern, z. B. `device licht-kueche power an` |
+| `dummy` | Test-Geräte anzeigen; `dummy fehler 20` lässt 20 % der Befehle scheitern |
+| `szene [Name]` | Szenen anzeigen oder ausführen, z. B. `szene Gute Nacht` |
+| `regel [Name an\|aus\|test]` | Regeln anzeigen, schalten oder sofort testen |
+| `automation neu` | `szenen.txt` und `regeln.txt` neu einlesen |
+| `wetter` | aktuelles Wetter und Prognose |
+| `sma`, `klima` | Solaranlage bzw. Klimas, siehe deren READMEs |
 | `stop` | HomeX beenden |
 
 ## Ein eigenes Plugin schreiben
@@ -112,7 +131,8 @@ public class HisensePlugin extends JavaPlugin {
 
 ```java
 public class HisenseKlima extends Device {
-    public HisenseKlima(String id, String name) { super(id, name, DeviceType.CLIMATE); }
+    // Der Raum ist optional – das Dashboard gruppiert die Geräte danach
+    public HisenseKlima(String id, String name, String raum) { super(id, name, DeviceType.CLIMATE, raum); }
 
     @Override
     public boolean control(String key, String value) {
@@ -127,6 +147,11 @@ public class HisenseKlima extends Device {
     }
 }
 ```
+
+Wer den Befehl gegeben hat ("Dashboard", "Konsole", "Szene Gute Nacht" …), steht in
+`ControlSource.current()` und landet automatisch im Aktivitätsprotokoll. Gerätetypen: `LIGHT`, `SWITCH`,
+`SHUTTER`, `CLIMATE`, `SENSOR`, `POWER_METER`, `SOLAR_INVERTER`, `BATTERY`, `WEATHER`, `SCENE`, `AUTOMATION`.
+Das Dashboard zeigt jeden Typ passend an.
 
 ### 5. Auf Events reagieren
 
@@ -156,9 +181,13 @@ public class MeinListener implements Listener {
 
 - [`SmaSolar`](homex-plugins/sma-solar/README.md) – Sunny Tripower per Modbus TCP oder SMA Cloud-API
 - [`HisenseKlima`](homex-plugins/hisense-klima/README.md) – Hisense-Klimas (ConnectLife) steuern
-- [`WebAPI`](homex-plugins/web-api/README.md) – REST-API mit Live-Updates und das HomeX-Dashboard
+- [`WebAPI`](homex-plugins/web-api/README.md) – REST-API mit Live-Updates, Aktivitätsprotokoll, Verlauf und das HomeX-Dashboard
+- [`DummyGeraete`](homex-plugins/dummy-geraete/README.md) – Test-Lichter, Dimmer, Steckdosen und Rollläden mit OK/FEHLER in der Konsole
+- [`Automation`](homex-plugins/automation/README.md) – Szenen und Regeln (Uhrzeit, Sonne, Bedingungen)
+- [`Wetter`](homex-plugins/wetter/README.md) – Wetter, Vorhersage und PV-Prognose von Open-Meteo
 
 ## Ideen für die nächsten Plugins
 
-- `Automation` – Regeln wie „Klima an, wenn die Einspeisung über 2000 W liegt“
-- `Verlauf` – Messwerte speichern und als Diagramm im Dashboard zeigen
+- Echte Lichter und Steckdosen, z. B. Shelly oder Tasmota (lokale HTTP-API, ohne Cloud)
+- Push-Nachrichten aufs Handy (z. B. über ntfy), wenn eine Regel auslöst oder ein Gerät ausfällt
+- Szenen direkt im Dashboard anlegen und bearbeiten

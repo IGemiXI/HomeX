@@ -1,0 +1,5 @@
+name: DummyGeraete
+version: ${project.version}
+main: de.homex.dummy.DummyGeraetePlugin
+author: Dennis
+description: Test-Geräte (Licht, Dimmer, Steckdose, Rollladen) mit Rückmeldung in der Konsole

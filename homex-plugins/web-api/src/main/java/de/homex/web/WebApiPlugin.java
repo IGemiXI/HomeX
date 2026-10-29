@@ -40,6 +40,9 @@ public class WebApiPlugin extends JavaPlugin implements Listener {
     private HttpServer server;
     private ExecutorService threads;
     private final EventStream events = new EventStream();
+    private final Aktivitaet aktivitaet = new Aktivitaet(e -> events.senden("activity", e));
+    private final Verlauf verlauf = new Verlauf();
+    private long gestartet;
 
     @Override
     public void onEnable() {
@@ -66,13 +69,22 @@ public class WebApiPlugin extends JavaPlugin implements Listener {
         // Virtuelle Threads: jede Anfrage und jeder Live-Client bekommt einen billigen eigenen Thread
         threads = Executors.newVirtualThreadPerTaskExecutor();
         server.setExecutor(threads);
-        server.createContext("/api", new ApiHandler(getHomeX(), token, cors, events, getLogger()));
+        try {
+            verlauf.laden(verlaufsDatei());
+        } catch (IOException e) {
+            getLogger().warning("Verlauf nicht lesbar: " + e.getMessage());
+        }
+        server.createContext("/api", new ApiHandler(getHomeX(), token, cors, events, aktivitaet, verlauf, getLogger()));
         if (Boolean.parseBoolean(c.getProperty("dashboard", "true").trim())) {
             server.createContext("/", new DashboardHandler(getClassLoader()));
         }
         server.start();
 
         registerListener(this);
+        gestartet = System.currentTimeMillis();
+        aktivitaet.system("HomeX gestartet");
+        // Verlauf alle 10 Minuten sichern, damit auch ein Absturz kaum Daten kostet
+        getHomeX().getScheduler().runRepeating(this, this::verlaufSichern, 10, 10, java.util.concurrent.TimeUnit.MINUTES);
 
         for (String url : adressen(adresse, port)) getLogger().info("Dashboard: " + url);
         getLogger().info("Zugangsschlüssel (Token): " + token);
@@ -80,6 +92,7 @@ public class WebApiPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        verlaufSichern();
         events.alleSchliessen();
         if (server != null) server.stop(0);
         if (threads != null) threads.shutdownNow();
@@ -94,11 +107,15 @@ public class WebApiPlugin extends JavaPlugin implements Listener {
     /** MONITOR = als Letzter, nach allen anderen Plugins; der Wert ist dann endgültig. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void beiAenderung(DeviceStateChangeEvent e) {
+        verlauf.aufnehmen(e.getDevice(), e.getKey(), e.getNewValue());
+        aktivitaet.aenderung(e.getDevice(), e.getKey(), e.getOldValue(), e.getNewValue(), e.getSource());
         if (events.anzahl() == 0) return;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", e.getDevice().getId());
         m.put("key", e.getKey());
         m.put("value", e.getNewValue());
+        if (e.getSource() != null) m.put("source", e.getSource());
+        m.put("changed", System.currentTimeMillis());
         events.senden("state", m);
     }
 
@@ -113,10 +130,27 @@ public class WebApiPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void beiPluginAn(PluginEnableEvent e) { events.senden("plugins", Map.of("name", e.getPlugin().getName(), "enabled", true)); }
+    public void beiPluginAn(PluginEnableEvent e) {
+        events.senden("plugins", Map.of("name", e.getPlugin().getName(), "enabled", true));
+        if (System.currentTimeMillis() - gestartet > 10_000) aktivitaet.system("Plugin " + e.getPlugin().getName() + " aktiviert");
+    }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void beiPluginAus(PluginDisableEvent e) { events.senden("plugins", Map.of("name", e.getPlugin().getName(), "enabled", false)); }
+    public void beiPluginAus(PluginDisableEvent e) {
+        events.senden("plugins", Map.of("name", e.getPlugin().getName(), "enabled", false));
+        if (e.getPlugin() != this) aktivitaet.system("Plugin " + e.getPlugin().getName() + " deaktiviert");
+    }
+
+    private Path verlaufsDatei() { return getDataFolder().resolve("verlauf.dat"); }
+
+    private void verlaufSichern() {
+        try {
+            Files.createDirectories(getDataFolder());
+            verlauf.speichern(verlaufsDatei());
+        } catch (IOException e) {
+            getLogger().warning("Verlauf nicht gespeichert: " + e.getMessage());
+        }
+    }
 
     // ------------------------------------------------------------------
     // Hilfen

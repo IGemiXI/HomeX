@@ -35,6 +35,9 @@ Jede Anfrage braucht den Schlüssel, entweder als Header `Authorization: Bearer 
 | `GET` | `/api/devices/{id}` | ein Gerät |
 | `POST` | `/api/devices/{id}` | Gerät steuern |
 | `GET` | `/api/events` | Live-Updates (Server-Sent Events) |
+| `GET` | `/api/activity?limit=100` | Aktivitätsprotokoll (neueste zuerst) |
+| `GET` | `/api/history?id=solar` | welche Messwerte es für ein Gerät gibt |
+| `GET` | `/api/history?id=solar&key=pv_w&stunden=24` | Verlauf eines Messwerts (1 Wert pro Minute, bis 48 Std.) |
 
 ### Beispiele
 
@@ -55,11 +58,19 @@ curl -H "Authorization: Bearer $TOKEN" -X POST \
 Antwort beim Steuern: `200` mit `{"ok":true,"device":{...}}`. Kommt `409` mit `"abgelehnt":[...]` zurück,
 war ein Wert ungültig, ein anderes Plugin hat ihn blockiert oder das Gerät war nicht erreichbar.
 
+Schicke beim Steuern den Header `X-HomeX-Client: <Name>` mit (z. B. `Handy-App`). Dann steht dieser Name als
+Auslöser in Konsole und Aktivitätsprotokoll:
+
+```
+[WebAPI] Dashboard (192.168.1.23): licht-kueche power true → OK
+[WebAPI] Web-API (192.168.1.40): licht-flur helligkeit 50 → NICHT ausgeführt
+```
+
 ### Gerät
 
 ```json
-{ "id": "solar", "name": "Solaranlage", "type": "SOLAR_INVERTER",
-  "states": { "pv_w": 3900, "verbrauch_w": 2270, "einspeisung_w": 1500, "batterie_soc": 87 } }
+{ "id": "licht-kueche", "name": "Deckenlicht", "type": "LIGHT", "room": "Küche",
+  "states": { "power": true }, "changed": 1793307853007, "source": "Dashboard" }
 ```
 
 ### Live-Updates
@@ -67,7 +78,8 @@ war ein Wert ungültig, ein anderes Plugin hat ihn blockiert oder das Gerät war
 ```js
 const es = new EventSource("/api/events?token=" + token);
 es.addEventListener("snapshot", e => /* alle Geräte (beim Verbinden) */ JSON.parse(e.data));
-es.addEventListener("state",    e => /* {"id","key","value"} */ JSON.parse(e.data));
+es.addEventListener("state",    e => /* {"id","key","value","source","changed"} */ JSON.parse(e.data));
+es.addEventListener("activity", e => /* neuer Eintrag im Aktivitätsprotokoll */ JSON.parse(e.data));
 es.addEventListener("device",   e => /* neues Gerät */ JSON.parse(e.data));
 es.addEventListener("removed",  e => /* {"id"} */ JSON.parse(e.data));
 es.addEventListener("plugins",  e => /* Plugin an/aus */ JSON.parse(e.data));
@@ -83,12 +95,19 @@ es.addEventListener("plugins",  e => /* Plugin an/aus */ JSON.parse(e.data));
 
 ## Dashboard
 
-Die Dateien liegen in `src/main/resources/web/` (HTML, CSS, JavaScript, ohne Build-Schritt). Das Dashboard zeigt:
+Die Dateien liegen in `src/main/resources/web/` (HTML, CSS, JavaScript, ohne Build-Schritt und ohne Bibliotheken).
 
-- **Energiefluss** zwischen Sonne, Batterie, Netz und Haus. Die Leitungen bewegen sich nur, wenn Strom fließt,
-  und zwar in die tatsächliche Richtung. Das funktioniert mit jedem Gerät vom Typ `SOLAR_INVERTER`.
-- **Klima**: Raum- und Solltemperatur, An/Aus, Modus und Lüfter für jedes Gerät vom Typ `CLIMATE`.
-- **Licht**: An/Aus und Helligkeit für Geräte vom Typ `LIGHT`.
-- **Weitere Geräte** mit allen Zuständen.
+- **Übersicht:** Alle Geräte nach Räumen, als leuchtende Waben. **Tippen schaltet**, gedrückt halten oder
+  Rechtsklick öffnet die Einstellungen (Helligkeit, Rollladen-Position, Klima). Darüber liegen die Szenen,
+  daneben Energie und die letzten Ereignisse.
+- **Energie:** Energiefluss zwischen Sonne, Batterie, Netz und Haus (die Leitungen laufen in die echte
+  Stromrichtung), Tagesverlauf von PV und Verbrauch, Sonnenprognose und Wetter.
+- **Klima:** alle Klimas mit Raum- und Solltemperatur, Modus, Lüfter, Eco/Turbo/Leise.
+- **Automation:** Szenen ausführen, Regeln an- und ausschalten oder sofort testen.
+- **Aktivität:** Was wann passiert ist und wer es ausgelöst hat, mit Filter für Fehler.
+- **System:** Plugins, alle Geräte-IDs zum Kopieren und ein Anmelde-Link für Tablets.
+
+Ein Befehl gilt erst als ausgeführt, wenn HomeX ihn bestätigt. Bis dahin pulsiert die Wabe. Schlägt er fehl,
+wackelt sie und färbt sich magenta. Den Grund zeigt die Konsole.
 
 Neue Geräte aus anderen Plugins erscheinen automatisch, ohne dass du das Dashboard ändern musst.

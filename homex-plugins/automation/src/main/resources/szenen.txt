@@ -1,0 +1,42 @@
+# ======================================================================
+#  Szenen – mehrere Befehle auf einen Klick (Dashboard) oder per
+#  Konsole:  szene Gute Nacht
+#
+#  szene <Name> | <Symbol>
+#    <Ziel> <Schlüssel> <Wert>
+#    ...
+#
+#  Ziel:   eine Geräte-ID (z. B. licht-kueche)
+#          raum:<Raum>            alle Geräte in einem Raum
+#          typ:<Typ>              licht, steckdose, rollladen, klima
+#          alle                   alle Geräte
+#          raum:Wohnzimmer+typ:licht   beides muss passen
+#  Bei raum:/typ:/alle werden nur Geräte geschaltet, die den Schlüssel
+#  kennen (ein Rollladen hat kein "power").
+#
+#  Symbole: mond, sonne, aus, film, haus, weg, kaffee, stern, schnee, feuer
+# ======================================================================
+
+szene Alles aus | aus
+  typ:licht power aus
+  typ:steckdose power aus
+
+szene Guten Morgen | sonne
+  typ:rollladen position 100
+  licht-kueche power an
+  steckdose-kaffee power an
+
+szene Gute Nacht | mond
+  typ:licht power aus
+  typ:steckdose power aus
+  typ:rollladen position 0
+  licht-flur power an
+
+szene Kino | film
+  raum:Wohnzimmer+typ:licht power aus
+  stehlampe-wohnzimmer helligkeit 15
+  rollladen-wohnzimmer position 0
+
+szene Haus verlassen | weg
+  alle power aus
+  typ:rollladen position 30

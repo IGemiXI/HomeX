@@ -13,10 +13,12 @@
     <modules>
         <module>homex-api</module>
         <module>homex-core</module>
-        <module>homex-plugins/demo-licht</module>
+        <module>homex-plugins/dummy-geraete</module>
         <module>homex-plugins/sma-solar</module>
         <module>homex-plugins/hisense-klima</module>
         <module>homex-plugins/web-api</module>
+        <module>homex-plugins/automation</module>
+        <module>homex-plugins/wetter</module>
     </modules>
 
     <properties>

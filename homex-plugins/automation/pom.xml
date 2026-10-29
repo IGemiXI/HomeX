@@ -9,8 +9,8 @@
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-    <artifactId>demo-licht</artifactId>
-    <name>HomeX Plugin: DemoLicht</name>
+    <artifactId>automation</artifactId>
+    <name>HomeX Plugin: Automation</name>
 
     <dependencies>
         <!-- "provided" = wird zur Laufzeit von HomeX bereitgestellt, NICHT ins Plugin gepackt -->
@@ -23,7 +23,7 @@
     </dependencies>
 
     <build>
-        <finalName>DemoLicht</finalName>
+        <finalName>Automation</finalName>
         <resources>
             <!-- ersetzt ${project.version} in plugin.yml -->
             <resource>

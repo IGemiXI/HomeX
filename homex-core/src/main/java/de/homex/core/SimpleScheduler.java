@@ -1,5 +1,6 @@
 package de.homex.core;
 
+import de.homex.api.device.ControlSource;
 import de.homex.api.plugin.JavaPlugin;
 import de.homex.api.scheduler.Scheduler;
 import de.homex.api.scheduler.Task;
@@ -70,14 +71,14 @@ final class SimpleScheduler implements Scheduler {
     @Override
     public Task runAsync(JavaPlugin owner, Runnable r) {
         SimpleTask t = create(owner);
-        t.future = executor.submit(wrap(t, r, true));
+        t.future = executor.submit(wrap(t, ControlSource.wrap(r), true));   // Auslöser mitnehmen
         return t;
     }
 
     @Override
     public Task runLater(JavaPlugin owner, Runnable r, long delay, TimeUnit unit) {
         SimpleTask t = create(owner);
-        t.future = executor.schedule(wrap(t, r, true), delay, unit);
+        t.future = executor.schedule(wrap(t, ControlSource.wrap(r), true), delay, unit);
         return t;
     }
 
