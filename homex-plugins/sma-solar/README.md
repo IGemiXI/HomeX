@@ -14,7 +14,10 @@ Es gibt zwei Quellen. Du schaltest in `plugins/SmaSolar/config.properties` oder 
 1. Öffne im Browser die IP des Wechselrichters und melde dich **als Installateur** an.
 2. Unter *Geräteparameter → Externe Kommunikation → Modbus* den **TCP-Server** einschalten (Port 502) und speichern.
    Dafür brauchst du kein OK von SMA, nur das Installateur-Passwort. Das legt der Installateur bei der Inbetriebnahme fest.
-3. Setze in der Config `modbus.host` auf die IP des Wechselrichters. Am besten vergibst du ihm im Router eine feste IP.
+3. Fertig – mit `modbus.host=auto` (Standard) **sucht HomeX den Wechselrichter selbst** im Heimnetz. Ändert sich
+   seine IP, sucht HomeX automatisch neu. Das ist ideal für Router ohne feste IPs, z. B. den Starlink-Router.
+   - Mehrere SMA-Geräte im Netz? Trag die Seriennummer vom Typenschild in `modbus.seriennummer` ein.
+   - Lieber eine feste Adresse? `modbus.host=192.168.1.200` (oder ein Gerätename) geht auch.
 4. Die Unit-ID ist bei SMA standardmäßig `3`.
 
 Diese Register werden gelesen (SMA-Modbus-Profil):

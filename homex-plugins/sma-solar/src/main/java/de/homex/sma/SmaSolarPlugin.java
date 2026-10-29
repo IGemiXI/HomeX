@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -68,11 +69,17 @@ public class SmaSolarPlugin extends JavaPlugin {
             }
         } else {
             if (!art.equals("modbus")) getLogger().warning("Unbekannte quelle '" + art + "' – nehme modbus");
+            List<String> netze = Arrays.stream(c.getProperty("modbus.suchnetz", "").split(","))
+                    .map(String::trim).filter(n -> n.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")).toList();
             quelle = new ModbusQuelle(
-                    c.getProperty("modbus.host", "192.168.178.50").trim(),
+                    c.getProperty("modbus.host", "auto").trim(),
                     (int) zahl(c, "modbus.port", 502),
                     (int) zahl(c, "modbus.unit-id", 3),
-                    (int) zahl(c, "modbus.timeout-ms", 3000));
+                    (int) zahl(c, "modbus.timeout-ms", 3000),
+                    netze,
+                    zahl(c, "modbus.seriennummer", 0),
+                    getLogger(),
+                    ip -> configWertSetzen("modbus.zuletzt-gefunden", ip));
             intervall = Math.max(1, zahl(c, "intervall.modbus", 5));
         }
 
@@ -132,7 +139,8 @@ public class SmaSolarPlugin extends JavaPlugin {
         String sub = a.length == 0 ? "status" : a[0].toLowerCase();
         switch (sub) {
             case "status" -> {
-                s.sendMessage("Quelle: " + (quelle == null ? "-" : quelle.name()));
+                s.sendMessage("Quelle: " + (quelle == null ? "-" : quelle.name())
+                        + (quelle instanceof ModbusQuelle mq && mq.host() != null ? " – " + mq.host() : ""));
                 geraet.getStates().forEach((k, v) -> s.sendMessage(String.format("  %-20s %s", k, v)));
             }
             case "jetzt" -> {
@@ -225,6 +233,7 @@ public class SmaSolarPlugin extends JavaPlugin {
 
     /** Verständliche Fehlermeldung (manche Java-Exceptions haben keinen Text). */
     static String grund(Throwable e) {
+        if (e instanceof java.io.EOFException) return "Verbindung vom Wechselrichter getrennt";
         if (e instanceof java.net.ConnectException) return "keine Verbindung (Adresse/Port prüfen, läuft das Gerät?)";
         if (e instanceof java.net.http.HttpTimeoutException || e instanceof java.net.SocketTimeoutException)
             return "Zeitüberschreitung";

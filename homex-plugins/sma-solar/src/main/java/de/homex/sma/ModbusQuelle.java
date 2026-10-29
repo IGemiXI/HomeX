@@ -1,6 +1,9 @@
 package de.homex.sma;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 /**
  * Liest den Sunny Tripower Smart Energy lokal über SMA Modbus (Unit-ID standardmäßig 3, Port 502).
@@ -24,19 +27,75 @@ final class ModbusQuelle implements SmaQuelle {
     private static final int BAT_LADEN     = 31393; // U32  W
     private static final int BAT_ENTLADEN  = 31395; // U32  W
 
-    private final ModbusTcpClient client;
-    private final int unitId;
+    /** Wie oft höchstens neu gesucht wird, wenn der Wechselrichter nicht gefunden wird. */
+    private static final long SUCH_PAUSE_MS = 60_000;
 
-    ModbusQuelle(String host, int port, int unitId, int timeoutMs) {
-        this.client = new ModbusTcpClient(host, port, timeoutMs);
+    private final boolean automatisch;
+    private final List<String> suchNetze;
+    private final long seriennummer;
+    private final int port, unitId, timeoutMs;
+    private final Logger log;
+    private final Consumer<String> gefunden;
+
+    private volatile String host;
+    private ModbusTcpClient client;
+    private long letzteSuche = 0;
+
+    /**
+     * @param host       feste Adresse/Name, oder "auto" = im Netz suchen
+     * @param gefunden   wird mit der IP aufgerufen, wenn die Suche den Wechselrichter gefunden hat
+     */
+    ModbusQuelle(String host, int port, int unitId, int timeoutMs,
+                 List<String> suchNetze, long seriennummer, Logger log, Consumer<String> gefunden) {
+        this.automatisch = host == null || host.isBlank() || host.equalsIgnoreCase("auto");
+        this.host = automatisch ? null : host;
+        this.port = port;
         this.unitId = unitId;
+        this.timeoutMs = timeoutMs;
+        this.suchNetze = suchNetze;
+        this.seriennummer = seriennummer;
+        this.log = log;
+        this.gefunden = gefunden;
     }
 
     @Override
-    public String name() { return "Modbus"; }
+    public String name() { return automatisch ? "Modbus (automatisch)" : "Modbus"; }
+
+    String host() { return host; }
 
     @Override
     public SolarData lesen() throws IOException {
+        if (client == null) verbinden();
+        try {
+            return werteLesen();
+        } catch (IOException e) {
+            if (automatisch) {          // IP hat sich vielleicht geändert → beim nächsten Mal neu suchen
+                client.close();
+                client = null;
+                host = null;
+            }
+            throw e;
+        }
+    }
+
+    private void verbinden() throws IOException {
+        if (host == null) {
+            long jetzt = System.currentTimeMillis();
+            if (jetzt - letzteSuche < SUCH_PAUSE_MS)
+                throw new IOException("Wechselrichter nicht gefunden – nächste Suche in "
+                        + (SUCH_PAUSE_MS - (jetzt - letzteSuche)) / 1000 + " s");
+            letzteSuche = jetzt;
+            var fund = WechselrichterSuche.suchen(suchNetze, port, unitId, seriennummer, log);
+            if (fund.isEmpty())
+                throw new IOException("Wechselrichter im Netz nicht gefunden – ist der Modbus-TCP-Server eingeschaltet?");
+            host = fund.get().host();
+            log.info("Wechselrichter gefunden: " + host + " (Seriennummer " + fund.get().seriennummer() + ")");
+            gefunden.accept(host);
+        }
+        client = new ModbusTcpClient(host, port, timeoutMs);
+    }
+
+    private SolarData werteLesen() throws IOException {
         // Zuerst ein Pflicht-Register: schlägt das fehl, ist der Wechselrichter nicht erreichbar.
         Double ac = s32(AC_LEISTUNG);
         if (ac == null) ac = 0d;   // nachts liefert SMA NaN → 0 W
@@ -113,5 +172,5 @@ final class ModbusQuelle implements SmaQuelle {
     }
 
     @Override
-    public void close() { client.close(); }
+    public void close() { if (client != null) client.close(); }
 }
