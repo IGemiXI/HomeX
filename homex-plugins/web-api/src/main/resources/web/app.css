@@ -1,5 +1,5 @@
 /* =====================================================================
-   HomeX – "Whisky & Rauch"
+   HomeX – "Whisky-Tasting"
    Fast schwarzer Grund, Licht wie Feuerschein von oben, Karten aus
    rauchigem Glas. Amber ist die eine leuchtende Farbe (Sonne, aktiv,
    Auswahl); die übrigen Farben tragen Bedeutung: Grün = Batterie,
@@ -7,45 +7,47 @@
    ===================================================================== */
 
 :root {
-  --holz: #0B0907;
-  --holz-hell: #15100C;
-  --leder: rgba(28, 21, 16, .78);
-  --leder-hoch: rgba(40, 29, 21, .85);
-  --leder-tief: rgba(14, 10, 8, .6);
-  --glas-rand: rgba(255, 170, 90, .14);
-  --kante: rgba(255, 190, 130, .10);
-  --kante-hell: rgba(255, 190, 130, .22);
+  --holz: #090706;
+  --holz-hell: #14100C;
+  --leder: rgba(27, 20, 14, .74);          /* dunkles Eichenbraun, wie Whisky im Schatten */
+  --leder-hoch: rgba(40, 30, 21, .85);
+  --leder-tief: rgba(12, 9, 7, .6);
+  --glas-rand: rgba(214, 178, 98, .17);    /* feine Goldkante */
+  --kante: rgba(214, 182, 120, .10);
+  --kante-hell: rgba(214, 182, 120, .24);
 
-  --text: #F7EFE6;
-  --leise: #B9A894;
-  --sehr-leise: #7D6E60;
+  --text: #F3EBDD;
+  --leise: #B4A48B;
+  --sehr-leise: #7B6D5A;
 
-  --messing: #F2952E;          /* Amber – die Akzentfarbe */
-  --messing-hell: #FFB65C;
-  --glut: #FF6A1F;
-  --sonne: #FFA436;
-  --batterie: #7FD08A;
-  --netz: #7DB4EE;
-  --kuehl: #7DB4EE;
-  --heiss: #FF5B3A;
-  --ok: #7FD08A;
+  --messing: #D4AF5A;          /* Gold – die Akzentfarbe (Karaffenverschluss) */
+  --messing-hell: #EDD28E;
+  --glut: #9C7A32;
+  --gold-verlauf: linear-gradient(135deg, #F6E4A6 0%, #D9B560 42%, #A8822F 78%, #E3C676 100%);
+  --sonne: #E0A04A;            /* Whisky-Bernstein für die Solarleistung */
+  --batterie: #8CC99A;
+  --netz: #8DB5E0;
+  --kuehl: #8DB5E0;
+  --heiss: #E2643F;
+  --ok: #8CC99A;
 
   /* Diagrammfarben – geprüft auf Kontrast und Farbsehschwäche vor dem dunklen Glas */
   --reihe-pv: #D07E22;
   --reihe-verbrauch: #4A92D4;
 
-  --panel: #1A140F;
-  --panel-hoch: #241B14;
+  --panel: #19130E;
+  --panel-hoch: #231A12;
   --violett: var(--messing);
   --mint: var(--ok);
 
+  --schrift-edel: "Cormorant Garamond", Georgia, serif;
   --schrift-titel: "Outfit", "Segoe UI", system-ui, sans-serif;
   --schrift-text: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
   --schrift-zahl: "Outfit", "Segoe UI", system-ui, sans-serif;
 
   --rand: 16px;
   --r-klein: 12px;
-  --r-gross: 20px;
+  --r-gross: 18px;
   --nav-breite: 232px;
   color-scheme: dark;
 }
@@ -60,16 +62,20 @@ body {
   color: var(--text);
   font: 400 1rem/1.5 var(--schrift-text);
   background-color: var(--holz);
-  /* Feuerschein von oben, nach unten in Rauch und Schwarz */
+  /* Dunkler Raum, Kerzenlichter im Hintergrund, unten der Schimmer des Holztresens */
   background-image:
-    radial-gradient(900px 520px at 62% -140px, rgba(255, 120, 30, .28), transparent 70%),
-    radial-gradient(700px 500px at 15% 0%, rgba(255, 160, 60, .10), transparent 70%),
-    radial-gradient(1200px 700px at 50% 115%, rgba(120, 60, 20, .18), transparent 70%),
-    linear-gradient(180deg, #120D0A, #0B0907 60%);
+    radial-gradient(60px 60px at 8% 9%, rgba(255, 176, 90, .20), transparent 70%),
+    radial-gradient(46px 46px at 15% 14%, rgba(255, 196, 120, .14), transparent 70%),
+    radial-gradient(70px 70px at 88% 6%, rgba(255, 170, 80, .16), transparent 70%),
+    radial-gradient(40px 40px at 80% 12%, rgba(255, 200, 130, .12), transparent 70%),
+    radial-gradient(900px 480px at 60% -160px, rgba(190, 120, 50, .22), transparent 70%),
+    radial-gradient(1300px 520px at 50% 118%, rgba(110, 70, 36, .30), transparent 70%),
+    linear-gradient(180deg, #0F0B08, #090706 55%, #0C0907);
   background-attachment: fixed;
 }
 
 h1, h2, h3 { margin: 0; font-family: var(--schrift-titel); font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.kopf h1, .abschnitt-kopf h2 { font-family: var(--schrift-edel); font-weight: 600; letter-spacing: 0; }
 p { margin: 0; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -87,10 +93,10 @@ strong, .zahl { font-variant-numeric: tabular-nums; }
 /* Rauchglas: wird von Karten, Panels und Dialogen geteilt. */
 .leder, .panel, .solar-karte, .klima-karte, .regel, .szenen-karte, .login, .blatt, .leer-gross {
   position: relative;
-  background: linear-gradient(165deg, rgba(255, 200, 150, .06), rgba(255, 200, 150, .015) 40%, rgba(0,0,0,.1)), var(--leder);
+  background: linear-gradient(170deg, rgba(232, 200, 140, .06), rgba(232, 200, 140, .012) 38%, rgba(0,0,0,.14)), var(--leder);
   border: 1px solid var(--glas-rand);
   border-radius: var(--r-gross);
-  box-shadow: 0 1px 0 rgba(255, 210, 160, .08) inset, 0 18px 40px rgba(0,0,0,.45);
+  box-shadow: 0 1px 0 rgba(246, 228, 166, .10) inset, 0 20px 44px rgba(0,0,0,.55);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
 
@@ -102,7 +108,7 @@ strong, .zahl { font-variant-numeric: tabular-nums; }
   position: sticky; top: 0; height: 100vh;
   display: flex; flex-direction: column; gap: 26px;
   padding: 24px 14px calc(18px + env(safe-area-inset-bottom));
-  background: rgba(10, 8, 6, .6);
+  background: linear-gradient(180deg, rgba(14, 10, 7, .78), rgba(8, 6, 5, .85));
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
   border-right: 1px solid var(--kante);
 }
@@ -111,14 +117,15 @@ strong, .zahl { font-variant-numeric: tabular-nums; }
   color: var(--text); text-decoration: none;
   font: 600 1.45rem/1 var(--schrift-titel); letter-spacing: .01em;
 }
-.marke-hex { width: 34px; height: 34px; filter: drop-shadow(0 0 8px rgba(255, 130, 40, .55)); }
+.marke-hex { width: 34px; height: 34px; filter: drop-shadow(0 0 7px rgba(214, 175, 90, .45)); }
+.marke span { letter-spacing: .06em; }
 .nav-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .nav-liste a {
   display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: var(--r-klein);
   color: var(--leise); text-decoration: none; font-weight: 500;
 }
-.nav-liste a:hover { color: var(--text); background: rgba(255,235,200,.04); }
-.nav-liste a[aria-current="page"] { color: var(--text); background: linear-gradient(90deg, rgba(255,140,40,.18), rgba(255,140,40,.04)); box-shadow: inset 2px 0 0 var(--messing); }
+.nav-liste a:hover { color: var(--text); background: rgba(240,220,170,.04); }
+.nav-liste a[aria-current="page"] { color: var(--text); background: linear-gradient(90deg, rgba(214,175,90,.16), rgba(214,175,90,.03)); box-shadow: inset 2px 0 0 var(--messing); }
 .nav-liste a[aria-current="page"] .icon { color: var(--messing-hell); }
 .nav-zahl { margin-left: auto; font-weight: 700; font-size: .78rem; color: var(--heiss); }
 .nav-status { margin-top: auto; padding: 10px 12px; font-size: .84rem; color: var(--leise); display: flex; align-items: center; gap: 10px; }
@@ -132,14 +139,14 @@ strong, .zahl { font-variant-numeric: tabular-nums; }
 /* ================================================================ Kopf */
 
 .kopf { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 28px; margin-bottom: 26px; }
-.kopf h1 { font-size: clamp(2.1rem, 4vw, 2.9rem); font-weight: 600; }
-.kopf-ueber { color: var(--messing-hell); font-size: .9rem; font-weight: 600; margin-bottom: 6px; }
+.kopf h1 { font-size: clamp(2.5rem, 5vw, 3.4rem); font-weight: 600; }
+.kopf-ueber { color: var(--messing); font-size: .74rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 8px; }
 .kopf-unter { color: var(--leise); margin-top: 6px; }
 .kopf-rechts { margin-left: auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
 .chip {
   display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
-  background: rgba(255, 200, 150, .05); border: 1px solid var(--kante); color: var(--leise); text-decoration: none; font-size: .9rem;
+  background: rgba(240, 215, 160, .045); border: 1px solid var(--kante-hell); color: var(--leise); text-decoration: none; font-size: .9rem;
 }
 .chip strong { color: var(--text); font-weight: 600; font-size: 1rem; }
 .chip .icon { color: var(--messing-hell); }
@@ -147,7 +154,7 @@ a.chip:hover { border-color: var(--kante-hell); }
 
 .abschnitt { margin-top: 34px; }
 .abschnitt-kopf { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; padding: 0 4px; }
-.abschnitt-kopf h2 { font-size: 1.45rem; }
+.abschnitt-kopf h2 { font-size: 1.85rem; }
 .abschnitt-kopf .neben { color: var(--leise); font-size: .9rem; }
 .panel { padding: 22px; }
 .panel h2 { font-size: 1.2rem; margin-bottom: 14px; position: relative; z-index: 1; }
@@ -167,13 +174,13 @@ a.chip:hover { border-color: var(--kante-hell); }
 .knopf:hover { border-color: var(--messing); }
 .knopf:disabled { opacity: .45; cursor: default; }
 .knopf .icon { width: 18px; height: 18px; }
-.knopf.haupt { color: #1A0F06; border: 0; background: linear-gradient(180deg, var(--messing-hell), var(--messing) 55%, var(--glut)); box-shadow: 0 6px 20px rgba(255,120,30,.3); }
+.knopf.haupt { color: #1A1206; border: 0; background: var(--gold-verlauf); box-shadow: 0 6px 20px rgba(214,175,90,.25), inset 0 1px 0 rgba(255,255,255,.35); }
 .knopf.klein { min-height: 34px; padding: 0 12px; font-size: .86rem; }
 
 .rund-knopf {
   width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center;
   border: 1px solid var(--kante-hell); color: var(--text);
-  background: rgba(255, 200, 150, .05);
+  background: rgba(240, 215, 160, .04);
 }
 .rund-knopf:hover { border-color: var(--messing); }
 .rund-knopf:disabled { opacity: .35; cursor: default; }
@@ -192,7 +199,7 @@ a.chip:hover { border-color: var(--kante-hell); }
   transition: transform .18s ease, background .18s;
 }
 .schalter[aria-checked="true"] { background: color-mix(in srgb, var(--an) 55%, #120D0A); border-color: color-mix(in srgb, var(--an) 60%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--an) 35%, transparent); }
-.schalter[aria-checked="true"]::after { transform: translateX(24px); background: #FFF6EC; }
+.schalter[aria-checked="true"]::after { transform: translateX(24px); background: #FFF8EA; }
 .schalter:disabled { opacity: .45; cursor: default; }
 
 .segmente { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -211,22 +218,31 @@ input[type="range"] { width: 100%; accent-color: var(--farbe, var(--messing)); h
 .solar-karte {
   display: block; padding: 26px 28px 24px; color: var(--text); text-decoration: none; overflow: hidden;
   background:
-    radial-gradient(420px 260px at 12% -20%, rgba(255, 140, 40, .30), transparent 70%),
-    linear-gradient(165deg, rgba(255, 200, 150, .07), rgba(0,0,0,.1)), var(--leder);
+    radial-gradient(460px 260px at 10% -25%, rgba(224, 160, 74, .26), transparent 70%),
+    linear-gradient(170deg, rgba(232, 200, 140, .07), rgba(0,0,0,.14)), var(--leder);
 }
+/* Goldener Rand oben wie der Karaffenverschluss, unten das Rautenmuster der Gläser */
+.solar-karte::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--gold-verlauf); opacity: .85; }
+.solar-karte::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; opacity: .22;
+  background:
+    repeating-linear-gradient(45deg, transparent 0 5px, rgba(214,175,90,.9) 5px 6px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, rgba(214,175,90,.9) 5px 6px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+.solar-karte { padding-bottom: 34px; }
 .solar-karte > * { position: relative; z-index: 1; }
 .solar-karte:hover .solar-mehr { color: var(--messing-hell); }
 .solar-karte.offline .solar-gross { opacity: .5; }
 .solar-kopf { display: flex; align-items: center; gap: 12px; }
-.solar-titel { display: inline-flex; align-items: center; gap: 8px; color: var(--messing-hell); font-weight: 600; font-size: .92rem; }
+.solar-titel { display: inline-flex; align-items: center; gap: 8px; color: var(--messing); font-weight: 700; font-size: .74rem; letter-spacing: .2em; text-transform: uppercase; }
 .solar-titel .icon { color: var(--sonne); }
 .solar-mehr { margin-left: auto; color: var(--leise); font-size: .86rem; }
 .solar-mehr::after { content: " ›"; }
 .solar-gross { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
 .solar-gross strong { font: 600 clamp(3.6rem, 9vw, 5.4rem)/1 var(--schrift-zahl); letter-spacing: -.03em;
-  background: linear-gradient(180deg, #FFE2B8, var(--sonne) 70%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0 18px rgba(255, 140, 40, .35)); }
-.solar-gross span { font: 600 1.5rem var(--schrift-zahl); color: var(--sonne); }
+  background: linear-gradient(180deg, #FBEBC0 0%, #E6C474 45%, #C58D3A 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 16px rgba(214, 160, 70, .28)); }
+.solar-gross span { font: 600 1.5rem var(--schrift-zahl); color: var(--messing); }
 .solar-unter { color: var(--leise); font-size: .92rem; margin-top: 4px; }
 .solar-warten { color: var(--leise); margin-top: 14px; max-width: 60ch; }
 
@@ -234,7 +250,7 @@ input[type="range"] { width: 100%; accent-color: var(--farbe, var(--messing)); h
 .solar-kachel {
   --farbe: var(--text);
   display: grid; gap: 4px; padding: 14px 16px; border-radius: 12px;
-  background: rgba(0,0,0,.28); border: 1px solid rgba(255, 200, 150, .07);
+  background: rgba(0,0,0,.32); border: 1px solid rgba(214, 182, 120, .09);
 }
 .solar-kachel.haus { --farbe: var(--text); }
 .solar-kachel.batterie { --farbe: var(--batterie); }
@@ -294,7 +310,7 @@ button.klima-name { background: none; border: 0; padding: 0; text-align: left; }
 .geraet-oeffnen { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; background: none; border: 0; padding: 6px 0; text-align: left; }
 .geraet-symbol { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none;
   background: rgba(0,0,0,.25); color: var(--leise); border: 1px solid var(--kante); }
-.geraet-zeile.an .geraet-symbol { color: var(--sonne); border-color: rgba(227,168,63,.5); }
+.geraet-zeile.an .geraet-symbol { color: var(--messing-hell); border-color: rgba(214,175,90,.5); }
 .geraet-text { display: grid; min-width: 0; }
 .geraet-text strong { font-weight: 600; }
 .geraet-text span { color: var(--leise); font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -314,7 +330,7 @@ button.klima-name { background: none; border: 0; padding: 0; text-align: left; }
 .fluss .strom.rueck { animation-direction: reverse; }
 @keyframes fliessen { to { stroke-dashoffset: -28; } }
 .fluss .knoten-form { fill: #17110D; stroke-width: 1.6; stroke: rgba(214,178,122,.35); }
-.fluss .haus .knoten-form { fill: #221912; stroke: var(--messing); filter: drop-shadow(0 0 10px rgba(255,130,40,.35)); }
+.fluss .haus .knoten-form { fill: #221912; stroke: var(--messing); filter: drop-shadow(0 0 10px rgba(214,175,90,.3)); }
 .fluss .wert { font: 600 21px/1 var(--schrift-zahl); fill: var(--text); text-anchor: middle; }
 .fluss .haus .wert { font-size: 30px; }
 .fluss .name { font: 600 12px/1 var(--schrift-text); fill: var(--leise); text-anchor: middle; }
@@ -490,7 +506,7 @@ table.daten td.zahl, table.daten th.zahl { text-align: right; font-variant-numer
     position: fixed; z-index: 20; top: auto; bottom: 0; left: 0; right: 0; height: auto;
     flex-direction: row; gap: 0; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     border-right: 0; border-top: 1px solid rgba(0,0,0,.6); box-shadow: 0 -1px 0 var(--kante);
-    background: rgba(12, 9, 7, .82); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    background: rgba(9, 7, 5, .86); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   }
   .marke { display: none; }
   .nav-status { display: none; }
@@ -503,7 +519,7 @@ table.daten td.zahl, table.daten th.zahl { text-align: right; font-variant-numer
   .nav-liste li { flex: 1; }
   .nav-liste a { flex-direction: column; gap: 3px; padding: 7px 2px; font-size: .7rem; font-weight: 600; }
   .nav-liste a[aria-current="page"] { box-shadow: none; background: none; color: var(--messing-hell); }
-  .nav-liste a[aria-current="page"] .icon { filter: drop-shadow(0 0 6px rgba(255,140,40,.7)); }
+  .nav-liste a[aria-current="page"] .icon { filter: drop-shadow(0 0 6px rgba(214,175,90,.6)); }
   .nav-zahl { display: none; }
   .inhalt { padding: calc(20px + env(safe-area-inset-top)) var(--rand) calc(100px + env(safe-area-inset-bottom)); }
   .kopf { margin-bottom: 18px; align-items: flex-start; }

@@ -104,6 +104,11 @@ mkdir -p "$SERVER/plugins" "$SERVER/plugins/deaktiviert" "$SERVER/logs"
 install -m 644 "$SRC/homex-core/target/HomeX.jar" "$SERVER/HomeX.jar"
 for jar in "$SRC"/homex-plugins/*/target/*.jar; do
   name=$(basename "$jar")
+  # Test-Geräte nur auf Wunsch (HOMEX_TESTGERAETE=1), sonst auch alte Kopien entfernen
+  if [ "$name" = "DummyGeraete.jar" ] && [ "${HOMEX_TESTGERAETE:-0}" != "1" ]; then
+    rm -f "$SERVER/plugins/$name" "$SERVER/plugins/deaktiviert/$name"
+    continue
+  fi
   if [ -f "$SERVER/plugins/deaktiviert/$name" ]; then
     install -m 644 "$jar" "$SERVER/plugins/deaktiviert/$name"     # bleibt aus, wird aber aktualisiert
     echo "  $name (deaktiviert, aktualisiert)"

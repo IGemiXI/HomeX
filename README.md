@@ -187,7 +187,7 @@ public class MeinListener implements Listener {
 - [`SmaSolar`](homex-plugins/sma-solar/README.md) – Sunny Tripower per Modbus TCP oder SMA Cloud-API
 - [`HisenseKlima`](homex-plugins/hisense-klima/README.md) – Hisense-Klimas (ConnectLife) steuern
 - [`WebAPI`](homex-plugins/web-api/README.md) – REST-API mit Live-Updates, Aktivitätsprotokoll, Verlauf und das HomeX-Dashboard
-- [`DummyGeraete`](homex-plugins/dummy-geraete/README.md) – Test-Lichter, Dimmer, Steckdosen und Rollläden mit OK/FEHLER in der Konsole
+- [`DummyGeraete`](homex-plugins/dummy-geraete/README.md) – Test-Lichter, Dimmer, Steckdosen und Rollläden mit OK/FEHLER in der Konsole (nur zum Testen am PC, auf dem Server nicht installiert)
 - [`Automation`](homex-plugins/automation/README.md) – Szenen und Regeln (Uhrzeit, Sonne, Bedingungen)
 - [`Wetter`](homex-plugins/wetter/README.md) – Wetter, Vorhersage und PV-Prognose von Open-Meteo
 

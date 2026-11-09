@@ -50,6 +50,9 @@ Am Ende zeigt es die Adresse des Dashboards und den Zugangsschlüssel an. Beim e
 | `homex update` | neuesten Stand von GitHub holen, bauen und neu starten. **Einstellungen bleiben erhalten** |
 | `homex start` / `stop` / `neustart` / `status` | |
 
+Die Test-Geräte (`DummyGeraete`) werden auf dem Server nicht installiert. Wer sie doch will:
+`HOMEX_TESTGERAETE=1 bash /opt/homex/src/installation/install.sh`.
+
 Dateien: Programm und Einstellungen liegen in `/opt/homex/server`, das Log in `/opt/homex/server/logs/homex.log`.
 
 ## 4. Solaranlage (Modbus) einbinden
