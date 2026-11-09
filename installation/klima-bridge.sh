@@ -44,8 +44,14 @@ if [ "${neu,,}" = j ]; then
   echo "Dieselben Daten wie in der ConnectLife-App. (Anmeldung per Google/Apple? Dann in der App erst ein Passwort setzen.)"
   read -rp "  E-Mail:   " MAIL
   read -rsp "  Passwort: " PASS; echo
+  MAIL=$(printf '%s' "$MAIL" | tr -d '[:space:]')
   umask 077
-  printf 'CONNECTLIFE_LOGIN=%s\nCONNECTLIFE_PASSWORD=%s\nLOG_LEVEL=info\n' "$MAIL" "$PASS" > "$BRIDGE/.env"
+  # Werte in einfache Anführungszeichen: so bleiben Sonderzeichen wie $ # " im Passwort unverändert
+  quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
+  if [[ "$PASS" == *"'"* ]]; then
+    rot "Hinweis: Ein ' im Passwort mag Docker nicht. Falls die Anmeldung scheitert, ändere das Passwort in der App."
+  fi
+  printf 'CONNECTLIFE_LOGIN=%s\nCONNECTLIFE_PASSWORD=%s\nLOG_LEVEL=info\n' "$(quote "$MAIL")" "$(quote "$PASS")" > "$BRIDGE/.env"
   chmod 600 "$BRIDGE/.env"
 fi
 
@@ -67,7 +73,7 @@ services:
 YML
 
 schritt "Bridge bauen und starten (dauert beim ersten Mal ein paar Minuten)"
-( cd "$BRIDGE" && $DC up -d --build )
+( cd "$BRIDGE" && $DC up -d --build --force-recreate )
 
 schritt "Warte auf die Klimas"
 ok=""
@@ -76,6 +82,12 @@ for _ in $(seq 1 40); do
   sleep 3
 done
 if [ -z "$ok" ]; then
+  if docker logs connectlife-bridge 2>&1 | grep -q "invalid loginID or password"; then
+    rot "ConnectLife lehnt E-Mail oder Passwort ab ('invalid loginID or password')."
+    rot "Prüfe, ob du dich in der ConnectLife-App mit genau diesen Daten (E-Mail + Passwort, nicht Google/Apple) anmelden kannst,"
+    rot "und starte das Skript dann nochmal (bei 'Neu eingeben?' mit j antworten)."
+    exit 1
+  fi
   rot "Die Bridge antwortet nicht. Die letzten Zeilen aus ihrem Log:"
   docker logs --tail 30 connectlife-bridge 2>&1 || true
   rot "Schick mir diese Ausgabe, dann schauen wir weiter."
