@@ -44,6 +44,13 @@ if ! locale -a 2>/dev/null | grep -qi '^c.utf-\?8$'; then
   gelb "Hinweis: C.UTF-8 fehlt – Umlaute in der Konsole könnten falsch aussehen."
 fi
 
+# Zeitzone: Proxmox-Vorlagen stehen auf UTC – Regeln wie "um 06:30" brauchen die echte Ortszeit
+if [ "$(readlink -f /etc/localtime 2>/dev/null)" != "/usr/share/zoneinfo/${HOMEX_ZEITZONE:-Europe/Berlin}" ]; then
+  ln -sf "/usr/share/zoneinfo/${HOMEX_ZEITZONE:-Europe/Berlin}" /etc/localtime
+  echo "${HOMEX_ZEITZONE:-Europe/Berlin}" > /etc/timezone
+  gruen "Zeitzone auf ${HOMEX_ZEITZONE:-Europe/Berlin} gestellt"
+fi
+
 # ---------------------------------------------------------------- 2. Java 25
 schritt "Java 25 (Eclipse Temurin)"
 case "$(uname -m)" in
@@ -130,7 +137,8 @@ cat > "$BASE/start.sh" <<'START'
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
 cd /opt/homex/server || exit 1
 while true; do
-  /opt/homex/java/bin/java -Xms64m -Xmx512m -Dstdout.encoding=UTF-8 -Dfile.encoding=UTF-8 -jar HomeX.jar 2>&1 \
+  /opt/homex/java/bin/java -Xms64m -Xmx512m -Duser.timezone="${HOMEX_ZEITZONE:-Europe/Berlin}" \
+    -Dstdout.encoding=UTF-8 -Dfile.encoding=UTF-8 -jar HomeX.jar 2>&1 \
     | tee -a logs/homex.log
   rc=${PIPESTATUS[0]}
   [ "$rc" -eq 0 ] && break                      # sauber mit "stop" beendet
