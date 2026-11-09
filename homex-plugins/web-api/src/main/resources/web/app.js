@@ -888,34 +888,88 @@ function soll(id, schritt, el) {
 
 // ----------------------------------------------------------------- Automation
 
+const VERWALTUNG = "automation";
+const regelGeraete = () => nachTyp("AUTOMATION").filter((d) => d.states.verwaltung !== true);
+const idOhne = (id, vorsilbe) => id.startsWith(vorsilbe) ? id.slice(vorsilbe.length) : id;
+const TAGE = [["mo", "Mo"], ["di", "Di"], ["mi", "Mi"], ["do", "Do"], ["fr", "Fr"], ["sa", "Sa"], ["so", "So"]];
+const SYMBOLE = ["stern", "sonne", "mond", "haus", "weg", "aus", "schnee", "feuer", "kaffee", "film"];
+const WERT_NAMEN = {
+  pv_w: "Solarleistung (W)", einspeisung_w: "Einspeisung (W)", netzbezug_w: "Netzbezug (W)", verbrauch_w: "Hausverbrauch (W)",
+  batterie_soc: "Batterie-Ladestand (%)", batterie_laden_w: "Batterie lädt (W)", batterie_entladen_w: "Batterie entlädt (W)",
+  ac_w: "Wechselrichter-Leistung (W)", ertrag_heute_kwh: "Ertrag heute (kWh)", ist_temp: "Raumtemperatur (°C)",
+  solltemp: "Solltemperatur (°C)", power: "Eingeschaltet", modus: "Modus", temperatur_c: "Außentemperatur (°C)",
+  gefuehlt_c: "Gefühlte Temperatur (°C)", wind_kmh: "Wind (km/h)", helligkeit: "Helligkeit (%)", position: "Position (%)",
+};
+const OPS = [[">", "größer als"], ["<", "kleiner als"], [">=", "mindestens"], ["<=", "höchstens"], ["=", "gleich"], ["!=", "ungleich"]];
+
+/** Was man mit einem Gerät in einer Szene oder Regel machen kann: [Schlüssel, Name, Werte | {min,max} | null] */
+function aktionenFuer(d) {
+  const anAus = [["an", "An"], ["aus", "Aus"]];
+  switch (d?.type) {
+    case "CLIMATE": return [["power", "Ein/Aus", anAus], ["modus", "Modus", MODI], ["solltemp", "Solltemperatur", { min: 16, max: 30, einheit: "°C" }],
+      ["luefter", "Lüfter", LUEFTER], ["eco", "Eco", anAus], ["turbo", "Turbo", anAus], ["leise", "Leise", anAus]];
+    case "LIGHT": return [["power", "Ein/Aus", anAus], ...("helligkeit" in d.states ? [["helligkeit", "Helligkeit", { min: 1, max: 100, einheit: "%" }]] : [])];
+    case "SWITCH": return [["power", "Ein/Aus", anAus]];
+    case "SHUTTER": return [["position", "Position", { min: 0, max: 100, einheit: "% offen" }]];
+    default: return Object.keys(d?.states || {}).map((k) => [k, WERT_NAMEN[k] || k, null]);
+  }
+}
+const steuerbar = () => [...zustand.geraete.values()]
+  .filter((d) => ["CLIMATE", "LIGHT", "SWITCH", "SHUTTER", "OTHER"].includes(d.type))
+  .sort((a, b) => a.name.localeCompare(b.name, "de"));
+
+async function verwalten(key, wert, element) {
+  if (!zustand.geraete.get(VERWALTUNG)) { melden("Das Automation-Plugin läuft nicht."); return false; }
+  element?.classList.add("wartet");
+  try {
+    const antwort = await api("/api/devices/" + VERWALTUNG, { method: "POST", body: JSON.stringify({ key, value: wert }) });
+    uebernehmen(antwort.device);
+    return true;
+  } catch (err) {
+    melden(err.status === 401 ? "Bitte melde dich erneut an." : (err.daten?.device?.states?.fehler || "Konnte nicht gespeichert werden."));
+    return false;
+  } finally {
+    element?.classList.remove("wartet");
+  }
+}
+
 function seiteAutomation() {
   const szenen = nachTyp("SCENE");
-  const regeln = [...nachTyp("AUTOMATION")].sort((a, b) => (b.states.aktiv === true) - (a.states.aktiv === true));
+  const regeln = regelGeraete().sort((a, b) => (b.states.aktiv === true) - (a.states.aktiv === true));
   const aktiv = regeln.filter((r) => r.states.aktiv === true).length;
-  const teile = [kopf("Automation", `${szenen.length} Szenen, ${aktiv} von ${regeln.length} Regeln aktiv`)];
+  const kann = !!zustand.geraete.get(VERWALTUNG);
+  const neu = (text, f) => h("button", { class: "knopf", type: "button", onclick: f, disabled: !kann }, ic("plus"), text);
+  const teile = [kopf("Automation", `${szenen.length} Szene${szenen.length === 1 ? "" : "n"}, ${aktiv} von ${regeln.length} Regel${regeln.length === 1 ? "" : "n"} aktiv`,
+    neu("Neue Szene", () => szenenEditor(null)), neu("Neue Regel", () => regelEditor(null)))];
 
-  if (!szenen.length && !regeln.length) {
-    teile.push(h("div", { class: "leer-gross" }, h("h3", {}, "Noch keine Szenen und Regeln"),
-      h("p", {}, "Lege das Plugin Automation in den Ordner plugins/ und starte HomeX neu. Es bringt Beispiele mit.")));
-    return h("div", {}, teile);
-  }
-
-  teile.push(abschnitt("Szenen", "Mehrere Geräte mit einem Klick", h("div", { class: "szenen-gitter" }, szenen.map(szenenKarte))));
-  teile.push(abschnitt("Regeln", "HomeX handelt selbst", h("div", { class: "regeln" }, regeln.map(regelZeile))));
-  teile.push(h("div", { class: "anleitung" },
-    h("p", {}, "Szenen und Regeln stehen in ", h("code", {}, "plugins/Automation/szenen.txt"), " und ",
-      h("code", {}, "regeln.txt"), ". Die Dateien erklären ihr Format selbst."),
-    h("p", {}, "Nach dem Bearbeiten in der Konsole ", h("code", {}, "automation neu"),
-      " tippen. Die Geräte-IDs für deine Befehle findest du unter System.")));
+  teile.push(abschnitt("Szenen", "Mehrere Geräte mit einem Klick", szenen.length
+    ? h("div", { class: "szenen-gitter" }, szenen.map(szenenKarte))
+    : h("div", { class: "leer-gross" }, h("h3", {}, "Noch keine Szenen"),
+      h("p", {}, "Eine Szene schaltet mehrere Geräte auf einmal, z. B. „Alle Klimas aus“ oder „Abends heizen“."),
+      h("button", { class: "knopf haupt", type: "button", style: { marginTop: "14px" }, disabled: !kann, onclick: () => szenenEditor(null) }, ic("plus"), "Szene anlegen"))));
+  teile.push(abschnitt("Regeln", "HomeX handelt selbst", regeln.length
+    ? h("div", { class: "regeln" }, regeln.map(regelZeile))
+    : h("div", { class: "leer-gross" }, h("h3", {}, "Noch keine Regeln"),
+      h("p", {}, "Eine Regel schaltet von selbst: zu einer Uhrzeit, bei Sonnenauf- oder -untergang oder wenn ein Wert eine Grenze erreicht. ",
+        "Zum Beispiel: Wenn mehr als 2000 W eingespeist werden, die Klima im Wohnzimmer einschalten."),
+      h("button", { class: "knopf haupt", type: "button", style: { marginTop: "14px" }, disabled: !kann, onclick: () => regelEditor(null) }, ic("plus"), "Regel anlegen"))));
   return h("div", {}, teile);
+}
+
+function bearbeitenKnoepfe(bearbeiten, loeschen) {
+  return h("div", { class: "bearbeiten-knoepfe" },
+    h("button", { class: "rund-knopf klein", type: "button", title: "Bearbeiten", "aria-label": "Bearbeiten", onclick: bearbeiten }, ic("stift")),
+    h("button", { class: "rund-knopf klein gefahr", type: "button", title: "Löschen", "aria-label": "Löschen", onclick: loeschen }, ic("muell")));
 }
 
 function szenenKarte(d) {
   const info = h("p");
-  const knopf = h("button", { class: "knopf", type: "button" }, h("span", { html: icon("start"), style: { display: "contents" } }), "Ausführen");
+  const knopf = h("button", { class: "knopf", type: "button" }, ic("start"), "Ausführen");
   const karte = h("article", { class: "szenen-karte", "data-symbol": d.states.symbol },
     h("span", { class: "szene-hex", style: { "--farbe": szenenFarbe(d.states.symbol) } }, h("span", { html: icon(d.states.symbol || "stern") })),
-    h("h3", {}, d.name), info, knopf);
+    h("h3", {}, d.name), info,
+    bearbeitenKnoepfe(() => szenenEditor(d.id), () => loeschenFragen("Szene", d, "szene-loeschen", idOhne(d.id, "szene-"))),
+    knopf);
   karte.style.setProperty("--farbe", szenenFarbe(d.states.symbol));
   knopf.addEventListener("click", async () => {
     knopf.disabled = true; karte.classList.add("laeuft");
@@ -923,31 +977,34 @@ function szenenKarte(d) {
     knopf.disabled = false; karte.classList.remove("laeuft");
   });
   beobachten(d.id, (g) => {
+    if (!g) return;
     const s = g.states;
-    info.textContent = `${s.befehle} Befehl${s.befehle === 1 ? "" : "e"}` + (s.zuletzt ? `, zuletzt ${wannText(isoZuMs(s.zuletzt))}` : "");
+    info.textContent = `${s.befehle} Aktion${s.befehle === 1 ? "" : "en"}` + (s.zuletzt ? `, zuletzt ${wannText(isoZuMs(s.zuletzt))}` : "");
   });
   return karte;
 }
 
 function szenenFarbe(sym) {
-  return ({ sonne: "var(--sonne)", kaffee: "var(--sonne)", feuer: "var(--sonne)", aus: "var(--heiss)", weg: "var(--heiss)", schnee: "var(--kuehl)" })[sym] || "var(--violett)";
+  return ({ sonne: "var(--sonne)", kaffee: "var(--sonne)", feuer: "var(--heiss)", aus: "var(--heiss)", weg: "var(--heiss)", schnee: "var(--kuehl)" })[sym] || "var(--messing)";
 }
 
 function regelZeile(d) {
   const titel = h("h3"), satz = h("p", { class: "regel-satz" }), info = h("div", { class: "regel-info" });
   const schalter = h("button", { class: "schalter", type: "button", role: "switch" });
+  const testen = h("button", { class: "knopf klein", type: "button", title: "Führt die Aktion sofort einmal aus" }, ic("start"), "Testen");
   const zeile = h("article", { class: "regel", "data-id": d.id }, schalter, h("div", {}, titel, satz),
-    h("button", { class: "knopf klein", type: "button", title: "Führt die Aktion sofort einmal aus" },
-      h("span", { html: icon("start"), style: { display: "contents" } }), "Testen"), info);
+    h("div", { class: "regel-knoepfe" }, testen,
+      bearbeitenKnoepfe(() => regelEditor(d.id), () => loeschenFragen("Regel", d, "regel-loeschen", idOhne(d.id, "regel-")))), info);
   schalter.addEventListener("click", () => senden(d.id, "aktiv", !(zustand.geraete.get(d.id).states.aktiv === true), zeile));
-  zeile.querySelector(".knopf").addEventListener("click", async () => {
-    if (await senden(d.id, "ausfuehren", 1, zeile)) melden(`Regel „${d.name}“ wird ausgeführt. Was passiert, zeigt die Aktivität.`, true);
+  testen.addEventListener("click", async () => {
+    if (await senden(d.id, "ausfuehren", 1, zeile)) melden(`Regel „${d.name}“ wird ausgeführt. Was passiert, zeigt der Verlauf.`, true);
   });
   beobachten(d.id, (g) => {
+    if (!g) return;
     const s = g.states, an = s.aktiv === true;
     zeile.classList.toggle("pausiert", !an);
     titel.textContent = g.name;
-    satz.replaceChildren(h("b", {}, wannGross(s.wann)), " → ", s.was);
+    satz.replaceChildren(h("b", {}, wannLesbar(s)), " → ", wasLesbar(s.was));
     schalter.setAttribute("aria-checked", String(an));
     schalter.setAttribute("aria-label", `Regel ${g.name} ${an ? "pausieren" : "aktivieren"}`);
     const teile = [];
@@ -961,6 +1018,266 @@ function regelZeile(d) {
 }
 
 const wannGross = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
+const geraetName = (id) => zustand.geraete.get(id)?.name || id;
+
+function tageLesbar(t) {
+  const tage = (t || "").split(",").filter(Boolean);
+  if (!tage.length || tage.length === 7) return "";
+  if (tage.join() === "mo,di,mi,do,fr") return " werktags";
+  if (tage.join() === "sa,so") return " am Wochenende";
+  return " " + tage.map((x) => TAGE.find((d) => d[0] === x)?.[1] || x).join(", ");
+}
+
+/** "Um 06:30 werktags", "Wenn Einspeisung (W) bei Solaranlage größer als 2000 seit 10 min" */
+function wannLesbar(s) {
+  if (s.e_uhrzeit) return "Um " + s.e_uhrzeit + tageLesbar(s.e_tage);
+  if (s.e_sonne) return "Bei Sonnen" + s.e_sonne + (s.e_versatz ? ` ${s.e_versatz > 0 ? "+" : "−"}${Math.abs(s.e_versatz)} min` : "") + tageLesbar(s.e_tage);
+  if (s.e_geraet) {
+    const op = OPS.find((o) => o[0] === s.e_op)?.[1] || s.e_op;
+    return `Wenn ${geraetName(s.e_geraet)}: ${WERT_NAMEN[s.e_key] || s.e_key} ${op} ${s.e_wert}` + (s.e_dauer ? ` (seit ${s.e_dauer} min)` : "");
+  }
+  return wannGross(s.wann);
+}
+
+function aktionLesbar(a) {
+  if (a.startsWith("szene ")) return "Szene „" + a.slice(6) + "“";
+  const [ziel, key, ...rest] = a.split(/\s+/);
+  const wert = rest.join(" ");
+  const d = zustand.geraete.get(ziel);
+  const name = ziel === "typ:klima" ? "Alle Klimas" : geraetName(ziel);
+  const def = aktionenFuer(d || { type: ziel === "typ:klima" ? "CLIMATE" : "" }).find((x) => x[0] === key);
+  const wertText = Array.isArray(def?.[2]) ? (def[2].find((w) => w[0] === wert)?.[1] || wert) : wert + (def?.[2]?.einheit ? " " + def[2].einheit : "");
+  return key === "power" ? `${name} ${wert === "an" ? "einschalten" : "ausschalten"}` : `${name}: ${def?.[1] || key} ${wertText}`;
+}
+const wasLesbar = (was) => (was || "").split(";").map((a) => a.trim()).filter(Boolean).map(aktionLesbar).join(", ");
+
+function loeschenFragen(art, d, key, id) {
+  editorOeffnen(`${art} löschen?`, d.name, "muell", [h("p", {}, `„${d.name}“ wird gelöscht. Das lässt sich nicht rückgängig machen.`)],
+    `${art} löschen`, async (knopf) => {
+      if (await verwalten(key, id, knopf)) { melden(`${art} „${d.name}“ gelöscht.`, true); return true; }
+      return false;
+    }, true);
+}
+
+/** Öffnet das Seitenblatt als Formular. speichern() liefert true, wenn es geschlossen werden darf. */
+function editorOeffnen(titel, unter, symbol, teile, knopfText, speichern, gefahr = false) {
+  blattBeobachter = null;
+  $("blatt-titel").textContent = titel;
+  $("blatt-unter").textContent = unter || "";
+  $("blatt-symbol").replaceChildren(h("span", { class: "szene-hex", style: { "--farbe": gefahr ? "var(--heiss)" : "var(--messing)" } }, h("span", { html: icon(symbol) })));
+  const form = h("form", { class: "editor", novalidate: true }, teile);
+  const knopf = h("button", { class: "knopf " + (gefahr ? "gefahr-voll" : "haupt"), type: "submit" }, knopfText);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    knopf.disabled = true;
+    try { if (await speichern(knopf)) $("blatt").close(); } finally { knopf.disabled = false; }
+  });
+  $("blatt-inhalt").replaceChildren(form);
+  $("blatt-fuss").replaceChildren(h("div", { class: "editor-fuss" },
+    h("button", { class: "knopf", type: "button", onclick: () => $("blatt").close() }, "Abbrechen"), knopf));
+  knopf.setAttribute("form", "");
+  knopf.addEventListener("click", (e) => { e.preventDefault(); form.requestSubmit(); });
+  if (!$("blatt").open) $("blatt").showModal();
+}
+
+const feld = (titel, ...inhalt) => h("label", { class: "feld" }, h("span", { class: "feld-titel" }, titel), inhalt);
+const auswahl = (optionen, wert, attrs = {}) => {
+  const s = h("select", attrs, optionen.map(([w, t]) => h("option", { value: w }, t)));
+  if (wert != null) s.value = String(wert);
+  return s;
+};
+
+function tageWahl(start) {
+  const gewaehlt = new Set((start || "mo,di,mi,do,fr,sa,so").split(",").filter(Boolean));
+  const knoepfe = TAGE.map(([w, t]) => h("button", { type: "button", "aria-pressed": String(gewaehlt.has(w)),
+    onclick: (e) => { gewaehlt.has(w) ? gewaehlt.delete(w) : gewaehlt.add(w); e.currentTarget.setAttribute("aria-pressed", String(gewaehlt.has(w))); } }, t));
+  const el = h("div", { class: "segmente tage" }, knoepfe);
+  el.wert = () => {
+    const t = TAGE.map((x) => x[0]).filter((x) => gewaehlt.has(x));
+    if (t.length === 7) return "";
+    if (t.join() === "mo,di,mi,do,fr") return "werktags";
+    if (t.join() === "sa,so") return "wochenende";
+    return t.join(",");
+  };
+  el.leer = () => gewaehlt.size === 0;
+  return el;
+}
+
+/** Eine Zeile "Gerät → Aktion → Wert". mitSzenen: in Regeln darf auch eine Szene gestartet werden. */
+function aktionZeile(start, mitSzenen, entfernen) {
+  const geraete = steuerbar();
+  const klimas = geraete.filter((d) => d.type === "CLIMATE");
+  const ziele = [
+    ...(klimas.length > 1 ? [["typ:klima", "Alle Klimas"]] : []),
+    ...geraete.map((d) => [d.id, d.name + (d.room && !d.name.includes(d.room) ? ` (${d.room})` : "")]),
+    ...(mitSzenen ? nachTyp("SCENE").map((d) => ["szene:" + d.name, "Szene: " + d.name]) : []),
+  ];
+  let [ziel, key, ...rest] = (start || "").split(/\s+/);
+  let wert = rest.join(" ");
+  if (start?.startsWith("szene ")) { ziel = "szene:" + start.slice(6); key = null; }
+  const zielWahl = auswahl(ziele, ziel || ziele[0]?.[0], { "aria-label": "Gerät" });
+  const keyWahl = h("select", { "aria-label": "Was" });
+  const wertBox = h("span", { class: "wert-box" });
+  let wertEl = null;
+
+  const zeichneWert = () => {
+    const def = aktionenFuer(geraetFuer(zielWahl.value)).find((x) => x[0] === keyWahl.value);
+    const art = def?.[2];
+    if (Array.isArray(art)) wertEl = auswahl(art, art.some((w) => w[0] === wert) ? wert : art[0][0], { "aria-label": "Wert" });
+    else if (art) wertEl = h("input", { type: "number", min: art.min, max: art.max, step: 1, value: wert !== "" && !isNaN(wert) ? wert : (art.min + art.max) / 2 | 0, "aria-label": "Wert", inputmode: "numeric" });
+    else wertEl = h("input", { type: "text", value: wert, "aria-label": "Wert" });
+    wertBox.replaceChildren(...[wertEl, art?.einheit ? h("span", { class: "einheit" }, art.einheit) : null].filter(Boolean));
+  };
+  const zeichneKey = () => {
+    const istSzene = zielWahl.value.startsWith("szene:");
+    keyWahl.hidden = wertBox.hidden = istSzene;
+    if (istSzene) return;
+    const defs = aktionenFuer(geraetFuer(zielWahl.value));
+    keyWahl.replaceChildren(...defs.map(([k, t]) => h("option", { value: k }, t)));
+    if (defs.some((x) => x[0] === key)) keyWahl.value = key;
+    zeichneWert();
+  };
+  zielWahl.addEventListener("change", () => { key = null; wert = ""; zeichneKey(); });
+  keyWahl.addEventListener("change", () => { key = keyWahl.value; wert = ""; zeichneWert(); });
+  zeichneKey();
+
+  const el = h("div", { class: "aktion-zeile" }, zielWahl, keyWahl, wertBox,
+    h("button", { class: "rund-knopf klein", type: "button", "aria-label": "Aktion entfernen", title: "Entfernen", onclick: () => entfernen(el) }, ic("schliessen")));
+  el.text = () => {
+    if (zielWahl.value.startsWith("szene:")) return "szene " + zielWahl.value.slice(6);
+    const w = String(wertEl?.value ?? "").trim();
+    return w ? `${zielWahl.value} ${keyWahl.value} ${w}` : null;
+  };
+  return el;
+}
+const geraetFuer = (ziel) => ziel === "typ:klima" ? { type: "CLIMATE", states: {} } : zustand.geraete.get(ziel);
+
+function aktionenListe(start, mitSzenen) {
+  const liste = h("div", { class: "aktionen" });
+  const entfernen = (el) => { if (liste.children.length > 1) el.remove(); };
+  const dazu = (s) => liste.append(aktionZeile(s, mitSzenen, entfernen));
+  (start.length ? start : [null]).forEach(dazu);
+  const el = h("div", {}, liste,
+    h("button", { class: "knopf klein", type: "button", style: { marginTop: "10px" }, onclick: () => dazu(null) }, ic("plus"), "Aktion hinzufügen"));
+  el.texte = () => [...liste.children].map((z) => z.text());
+  return el;
+}
+
+const nameOk = (n) => n && !/[|;\n]/.test(n);
+
+function szenenEditor(id) {
+  if (!steuerbar().length) { melden("Es gibt noch keine Geräte, die eine Szene schalten könnte."); return; }
+  const d = id ? zustand.geraete.get(id) : null;
+  const name = h("input", { type: "text", value: d?.name || "", maxlength: 40, placeholder: "z. B. Alle Klimas aus", required: true, autocomplete: "off" });
+  let symbol = d?.states.symbol || "stern";
+  const symbole = h("div", { class: "symbol-wahl" }, SYMBOLE.map((s) => h("button", { type: "button", "aria-pressed": String(s === symbol), "aria-label": s,
+    html: icon(s), onclick: (e) => { symbol = s; symbole.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === e.currentTarget))); } })));
+  const aktionen = aktionenListe((d?.states.liste || "").split("\n").filter(Boolean), false);
+  editorOeffnen(d ? "Szene bearbeiten" : "Neue Szene", "Mehrere Geräte mit einem Klick", "stern",
+    [feld("Name", name), h("div", { class: "feld" }, h("span", { class: "feld-titel" }, "Symbol"), symbole),
+      h("div", { class: "feld" }, h("span", { class: "feld-titel" }, "Was soll passieren?"), aktionen)],
+    d ? "Speichern" : "Szene anlegen", async (knopf) => {
+      const n = name.value.trim();
+      if (!nameOk(n)) { melden("Bitte einen Namen eingeben (ohne | und ;)."); name.focus(); return false; }
+      const texte = aktionen.texte();
+      if (texte.some((t) => !t)) { melden("Bei einer Aktion fehlt noch der Wert."); return false; }
+      const ok = await verwalten("szene-speichern", [d ? idOhne(d.id, "szene-") : "", `${n} | ${symbol}`, ...texte].join("\n"), knopf);
+      if (ok) melden(`Szene „${n}“ gespeichert.`, true);
+      return ok;
+    });
+}
+
+function regelEditor(id) {
+  const d = id ? zustand.geraete.get(id) : null;
+  const s = d?.states || {};
+  const name = h("input", { type: "text", value: d?.name || "", maxlength: 40, placeholder: "z. B. Solarstrom zum Kühlen", required: true, autocomplete: "off" });
+  let art = s.e_geraet ? "wert" : s.e_sonne ? "sonne" : "zeit";
+
+  // Uhrzeit
+  const uhr = h("input", { type: "time", value: s.e_uhrzeit || "07:00", required: true });
+  const tageZeit = tageWahl(s.e_uhrzeit ? s.e_tage : null);
+  // Sonne
+  const sonne = auswahl([["untergang", "Sonnenuntergang"], ["aufgang", "Sonnenaufgang"]], s.e_sonne || "untergang");
+  const versatz = h("input", { type: "number", step: 5, min: -240, max: 240, value: s.e_versatz || 0, inputmode: "numeric" });
+  const tageSonne = tageWahl(s.e_sonne ? s.e_tage : null);
+  // Messwert
+  const quellen = [...zustand.geraete.values()].filter((g) => !["SCENE", "AUTOMATION"].includes(g.type)
+    && Object.values(g.states).some((v) => istZahl(v) || typeof v === "boolean")).sort((a, b) => a.name.localeCompare(b.name, "de"));
+  const quelle = auswahl(quellen.map((g) => [g.id, g.name]), s.e_geraet || zustand.geraete.get("solar")?.id || quellen[0]?.id);
+  const wertKey = h("select");
+  const op = auswahl(OPS, s.e_op || ">");
+  const vergleich = h("span", { class: "wert-box" });
+  let vergleichEl;
+  const dauer = h("input", { type: "number", min: 0, max: 600, step: 1, value: s.e_dauer ?? 5, inputmode: "numeric" });
+  const zeichneVergleich = (start) => {
+    const v = zustand.geraete.get(quelle.value)?.states[wertKey.value];
+    vergleichEl = typeof v === "boolean" ? auswahl([["an", "an"], ["aus", "aus"]], start || "an")
+      : h("input", { type: "number", step: "any", value: start ?? (istZahl(v) ? Math.round(v) : ""), inputmode: "decimal", required: true });
+    op.querySelectorAll("option").forEach((o) => { o.hidden = typeof v === "boolean" && !["=", "!="].includes(o.value); });
+    if (typeof v === "boolean" && !["=", "!="].includes(op.value)) op.value = "=";
+    vergleich.replaceChildren(vergleichEl);
+  };
+  const zeichneKeys = (startKey, startWert) => {
+    const g = zustand.geraete.get(quelle.value);
+    const keys = Object.entries(g?.states || {}).filter(([k, v]) => (istZahl(v) || typeof v === "boolean") && !k.startsWith("e_"))
+      .map(([k]) => [k, WERT_NAMEN[k] || k]).sort((a, b) => (b[0] in WERT_NAMEN) - (a[0] in WERT_NAMEN));
+    wertKey.replaceChildren(...keys.map(([k, t]) => h("option", { value: k }, t)));
+    if (keys.some((k) => k[0] === startKey)) wertKey.value = startKey;
+    zeichneVergleich(startWert);
+  };
+  quelle.addEventListener("change", () => zeichneKeys(null));
+  wertKey.addEventListener("change", () => zeichneVergleich());
+  zeichneKeys(s.e_key || "einspeisung_w", s.e_wert);
+
+  const teile = {
+    zeit: h("div", { class: "editor-gruppe" }, feld("Uhrzeit", uhr), h("div", { class: "feld" }, h("span", { class: "feld-titel" }, "An diesen Tagen"), tageZeit)),
+    sonne: h("div", { class: "editor-gruppe" }, feld("Ereignis", sonne), feld("Minuten davor (−) oder danach (+)", versatz),
+      h("div", { class: "feld" }, h("span", { class: "feld-titel" }, "An diesen Tagen"), tageSonne)),
+    wert: h("div", { class: "editor-gruppe" }, feld("Gerät", quelle), feld("Messwert", wertKey),
+      h("div", { class: "zwei" }, feld("Bedingung", op), feld("Wert", vergleich)),
+      feld("Mindestens so lange erfüllt (Minuten)", dauer),
+      h("p", { class: "hinweis-klein" }, "Die Regel löst einmal aus, wenn die Bedingung so lange erfüllt ist. Wieder auslösen kann sie erst, wenn die Bedingung zwischendurch nicht mehr erfüllt war.")),
+  };
+  const artKnoepfe = [["zeit", "Uhrzeit"], ["sonne", "Sonne"], ["wert", "Messwert"]].map(([w, t]) =>
+    h("button", { type: "button", "data-wert": w, onclick: () => { art = w; artZeigen(); } }, t));
+  const artZeigen = () => {
+    artKnoepfe.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.wert === art)));
+    Object.entries(teile).forEach(([k, el]) => { el.hidden = k !== art; });
+  };
+  artZeigen();
+  const aktionen = aktionenListe((s.was || "").split(";").map((x) => x.trim()).filter(Boolean), true);
+
+  editorOeffnen(d ? "Regel bearbeiten" : "Neue Regel", "HomeX schaltet von selbst", "automation",
+    [feld("Name", name),
+      h("div", { class: "feld" }, h("span", { class: "feld-titel" }, "Wann?"), h("div", { class: "segmente" }, artKnoepfe)),
+      ...Object.values(teile),
+      h("div", { class: "feld" }, h("span", { class: "feld-titel" }, "Was soll passieren?"), aktionen)],
+    d ? "Speichern" : "Regel anlegen", async (knopf) => {
+      const n = name.value.trim();
+      if (!nameOk(n)) { melden("Bitte einen Namen eingeben (ohne | und ;)."); name.focus(); return false; }
+      let wann;
+      if (art === "zeit") {
+        if (!uhr.value) { melden("Bitte eine Uhrzeit wählen."); return false; }
+        if (tageZeit.leer()) { melden("Bitte mindestens einen Tag wählen."); return false; }
+        wann = `um ${uhr.value} ${tageZeit.wert()}`;
+      } else if (art === "sonne") {
+        if (tageSonne.leer()) { melden("Bitte mindestens einen Tag wählen."); return false; }
+        const v = Math.round(Number(versatz.value) || 0);
+        wann = `bei sonnen${sonne.value}${v ? ` ${v > 0 ? "+" : "-"}${Math.abs(v)} min` : ""} ${tageSonne.wert()}`;
+      } else {
+        const w = String(vergleichEl.value).trim().replace(",", ".");
+        if (!quelle.value || !wertKey.value || w === "") { melden("Bitte Gerät, Messwert und Vergleichswert angeben."); return false; }
+        const m = Math.max(0, Math.round(Number(dauer.value) || 0));
+        wann = `wenn ${quelle.value}.${wertKey.value} ${op.value} ${w}${m ? ` für ${m} min` : ""}`;
+      }
+      const texte = aktionen.texte();
+      if (texte.some((t) => !t)) { melden("Bei einer Aktion fehlt noch der Wert."); return false; }
+      const ok = await verwalten("regel-speichern", [d ? idOhne(d.id, "regel-") : "", `${n} | ${wann.trim()} | ${texte.join("; ")}`].join("\n"), knopf);
+      if (ok) melden(`Regel „${n}“ gespeichert.`, true);
+      return ok;
+    });
+}
+
 
 // ----------------------------------------------------------------- Aktivität
 

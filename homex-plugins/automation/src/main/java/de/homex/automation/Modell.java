@@ -57,6 +57,16 @@ final class Modell {
         return sb.toString();
     }
 
+    /** "mo,di,mi" – für das Dashboard */
+    static String tageKurz(Set<DayOfWeek> tage) {
+        StringBuilder sb = new StringBuilder();
+        for (DayOfWeek d : tage) {
+            if (!sb.isEmpty()) sb.append(',');
+            sb.append(d.getDisplayName(java.time.format.TextStyle.SHORT, Locale.GERMAN).substring(0, 2).toLowerCase(Locale.ROOT));
+        }
+        return sb.toString();
+    }
+
     /** Beschreibung für Menschen, z. B. "um 06:30 werktags" oder "wenn Einspeisung > 2000 für 10 min" */
     static String beschreibung(Ausloeser a) {
         return switch (a) {

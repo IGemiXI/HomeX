@@ -25,6 +25,7 @@ final class SzeneGeraet extends Device {
         this.ausfuehren = ausfuehren;
         updateState("symbol", szene.symbol());
         updateState("befehle", szene.befehle().size());
+        updateState("liste", String.join("\n", szene.befehle().stream().map(Object::toString).toList()));
     }
 
     @Override

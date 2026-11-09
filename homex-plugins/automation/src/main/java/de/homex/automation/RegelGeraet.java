@@ -39,6 +39,25 @@ final class RegelGeraet extends Device {
             case Bedingung b -> "bedingung";
         });
         updateState("wann", Modell.beschreibung(def.ausloeser()));
+        // Einzelteile, damit das Dashboard die Regel zum Bearbeiten öffnen kann
+        switch (def.ausloeser()) {
+            case Zeit z -> {
+                updateState("e_uhrzeit", z.uhrzeit().toString());
+                updateState("e_tage", Modell.tageKurz(z.tage()));
+            }
+            case SonnenEreignis s -> {
+                updateState("e_sonne", s.aufgang() ? "aufgang" : "untergang");
+                updateState("e_versatz", s.versatzMin());
+                updateState("e_tage", Modell.tageKurz(s.tage()));
+            }
+            case Bedingung b -> {
+                updateState("e_geraet", b.geraet());
+                updateState("e_key", b.key());
+                updateState("e_op", b.op());
+                updateState("e_wert", b.wert());
+                updateState("e_dauer", b.dauerMin());
+            }
+        }
         updateState("was", def.aktionen().stream().map(Object::toString).collect(Collectors.joining("; ")));
     }
 

@@ -49,10 +49,12 @@ public class AutomationPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         for (String datei : List.of("szenen.txt", "regeln.txt", "regeln-status.properties")) vorlageKopieren(datei);
+        alteBeispieleErsetzen();
         nachholenMin = (int) zahl("nachholen-min", 2);
 
         ausfuehrer = new Ausfuehrer(getHomeX(), this::szeneFinden);
         laden();
+        registrieren(new VerwaltungGeraet(this::verwalten));
 
         registerListener(this);
         registerCommand("szene", "szene <Name> – Szene ausführen (ohne Namen: Liste)", this::befehlSzene);
@@ -306,12 +308,158 @@ public class AutomationPlugin extends JavaPlugin implements Listener {
                 + (de.homex.api.device.ControlSource.current() == null ? "" : "   ← " + de.homex.api.device.ControlSource.current()));
         Properties p = status();
         p.setProperty("aktiv." + r.def.id(), String.valueOf(an));
+        statusSpeichern(p);
+        if (an) getHomeX().getScheduler().runAsync(this, this::pruefen);
+    }
+
+    private void statusSpeichern(Properties p) {
         try (var w = Files.newBufferedWriter(getDataFolder().resolve("regeln-status.properties"), StandardCharsets.UTF_8)) {
             p.store(w, "Welche Regeln aktiv sind (wird von HomeX gepflegt)");
         } catch (IOException e) {
             getLogger().log(Level.WARNING, "Regel-Status nicht gespeichert", e);
         }
-        if (an) getHomeX().getScheduler().runAsync(this, this::pruefen);
+    }
+
+    // =====================================================================
+    // Bearbeiten aus dem Dashboard
+    // =====================================================================
+
+    /** Liefert null, wenn alles geklappt hat, sonst den Grund. */
+    private synchronized String verwalten(String key, String wert) {
+        String[] z = wert.replace("\r", "").split("\n", -1);
+        String alt = z[0].trim();
+        String wer = de.homex.api.device.ControlSource.current();
+        String von = wer == null ? "" : "   ← " + wer;
+        try {
+            switch (key) {
+                case "regel-loeschen" -> {
+                    RegelGeraet g = regeln.get(alt);
+                    if (g == null) return "Diese Regel gibt es nicht (mehr)";
+                    regelnSchreiben(regeln.values().stream().filter(r -> r != g).map(r -> r.def).toList());
+                    Properties p = status();
+                    p.remove("aktiv." + alt);
+                    statusSpeichern(p);
+                    getLogger().info("Regel '" + g.getName() + "' gelöscht" + von);
+                }
+                case "szene-loeschen" -> {
+                    SzeneGeraet g = szenen.get(alt);
+                    if (g == null) return "Diese Szene gibt es nicht (mehr)";
+                    szenenSchreiben(szenen.values().stream().filter(s -> s != g).map(s -> s.szene).toList());
+                    getLogger().info("Szene '" + g.getName() + "' gelöscht" + von);
+                }
+                case "regel-speichern" -> {
+                    if (z.length < 2 || z[1].isBlank()) return "Die Regel ist leer";
+                    Parser p = new Parser();
+                    List<Parser.RegelDef> neu = p.regeln(List.of("regel " + z[1].trim()));
+                    if (!p.fehler.isEmpty()) return ohneZeile(p.fehler.getFirst());
+                    Parser.RegelDef r = neu.getFirst();
+                    if (!r.id().equals(alt) && regeln.containsKey(r.id())) return "Eine Regel „" + r.name() + "“ gibt es schon";
+                    List<Parser.RegelDef> liste = new ArrayList<>();
+                    boolean ersetzt = false;
+                    for (RegelGeraet g : regeln.values()) {
+                        if (g.def.id().equals(alt)) { liste.add(r); ersetzt = true; } else liste.add(g.def);
+                    }
+                    if (!ersetzt) liste.add(r);
+                    regelnSchreiben(liste);
+                    if (ersetzt && !alt.equals(r.id())) {
+                        Properties st = status();
+                        String a = st.getProperty("aktiv." + alt);
+                        st.remove("aktiv." + alt);
+                        if (a != null) st.setProperty("aktiv." + r.id(), a);
+                        statusSpeichern(st);
+                    }
+                    getLogger().info("Regel '" + r.name() + "' " + (ersetzt ? "geändert" : "angelegt") + von);
+                }
+                case "szene-speichern" -> {
+                    if (z.length < 2 || z[1].isBlank()) return "Die Szene ist leer";
+                    List<String> zeilen = new ArrayList<>();
+                    zeilen.add("szene " + z[1].trim());
+                    for (int i = 2; i < z.length; i++) if (!z[i].isBlank()) zeilen.add("  " + z[i].trim());
+                    Parser p = new Parser();
+                    List<Szene> neu = p.szenen(zeilen);
+                    if (!p.fehler.isEmpty()) return ohneZeile(p.fehler.getFirst());
+                    if (neu.isEmpty()) return "Die Szene braucht einen Namen";
+                    Szene s = neu.getFirst();
+                    if (s.befehle().isEmpty()) return "Die Szene braucht mindestens eine Aktion";
+                    if (!s.id().equals(alt) && szenen.containsKey(s.id())) return "Eine Szene „" + s.name() + "“ gibt es schon";
+                    List<Szene> liste = new ArrayList<>();
+                    boolean ersetzt = false;
+                    for (SzeneGeraet g : szenen.values()) {
+                        if (g.szene.id().equals(alt)) { liste.add(s); ersetzt = true; } else liste.add(g.szene);
+                    }
+                    if (!ersetzt) liste.add(s);
+                    szenenSchreiben(liste);
+                    getLogger().info("Szene '" + s.name() + "' " + (ersetzt ? "geändert" : "angelegt") + von);
+                }
+                default -> { return "Unbekannter Befehl " + key; }
+            }
+        } catch (IOException e) {
+            getLogger().log(Level.WARNING, "Speichern fehlgeschlagen", e);
+            return "Konnte nicht gespeichert werden: " + e.getMessage();
+        }
+        laden();
+        return null;
+    }
+
+    private static String ohneZeile(String fehler) {
+        return fehler.replaceFirst("^\\S+\\.txt Zeile \\d+: ", "");
+    }
+
+    private void regelnSchreiben(List<Parser.RegelDef> liste) throws IOException {
+        StringBuilder sb = new StringBuilder(kopf("regeln.txt"));
+        for (Parser.RegelDef r : liste) {
+            sb.append("regel ").append(r.name()).append(" | ").append(Modell.beschreibung(r.ausloeser())).append(" | ")
+              .append(String.join("; ", r.aktionen().stream().map(Object::toString).toList())).append('\n');
+        }
+        schreiben("regeln.txt", sb.toString());
+    }
+
+    private void szenenSchreiben(List<Szene> liste) throws IOException {
+        StringBuilder sb = new StringBuilder(kopf("szenen.txt"));
+        for (Szene s : liste) {
+            sb.append("szene ").append(s.name()).append(" | ").append(s.symbol()).append('\n');
+            for (Befehl b : s.befehle()) sb.append("  ").append(b).append('\n');
+            sb.append('\n');
+        }
+        schreiben("szenen.txt", sb.toString());
+    }
+
+    /** Die Erklärung oben in der Datei bleibt erhalten. */
+    private String kopf(String datei) {
+        StringBuilder sb = new StringBuilder();
+        for (String z : zeilen(datei)) {
+            if (!z.startsWith("#")) break;
+            sb.append(z).append('\n');
+        }
+        return sb.append('\n').toString();
+    }
+
+    private void schreiben(String datei, String inhalt) throws IOException {
+        Path ziel = getDataFolder().resolve(datei);
+        Path tmp = getDataFolder().resolve(datei + ".neu");
+        Files.writeString(tmp, inhalt, StandardCharsets.UTF_8);
+        Files.move(tmp, ziel, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    /** Die Beispiele aus älteren Versionen (für Test-Geräte) entfernen – aber nur, wenn niemand die Datei geändert hat. */
+    private void alteBeispieleErsetzen() {
+        Map<String, String> alt = Map.of(
+                "szenen.txt", "335f2de3ebe5b7dfef926b3a7720b11c86c1ddf87a023d75544209231842077e",
+                "regeln.txt", "47471964f3c4e2c22108c9d2ceb2aeb3ac8d97456399c7af24e6f8a893761325");
+        for (var e : alt.entrySet()) {
+            Path ziel = getDataFolder().resolve(e.getKey());
+            try {
+                if (!Files.exists(ziel)) continue;
+                byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(ziel));
+                if (!java.util.HexFormat.of().formatHex(hash).equals(e.getValue())) continue;
+                try (InputStream in = getResource(e.getKey())) {
+                    if (in != null) Files.copy(in, ziel, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+                getLogger().info(e.getKey() + ": die alten Beispiele wurden entfernt.");
+            } catch (IOException | java.security.NoSuchAlgorithmException ex) {
+                getLogger().log(Level.WARNING, e.getKey() + " nicht geprüft", ex);
+            }
+        }
     }
 
     // =====================================================================

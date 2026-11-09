@@ -58,6 +58,8 @@ const ICONS = {
   wind: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>',
   thermometer: '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0Z"/>',
   warnung: '<path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17v.01"/>',
+  stift: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/>',
+  muell: '<path d="M4 7h16M10 11v6M14 11v6M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
 };
 
 /** SVG-Markup für ein Symbol. Unbekannte Namen bekommen ein neutrales Gerätesymbol. */

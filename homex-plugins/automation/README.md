@@ -3,8 +3,11 @@
 **Szenen** schalten mehrere Geräte auf einmal („Gute Nacht“, „Kino“). **Regeln** lassen HomeX selbst handeln:
 zu einer Uhrzeit, bei Sonnenauf- oder -untergang, oder wenn ein Messwert eine Grenze überschreitet.
 
-Beide stehen als einfache Textdateien in `plugins/Automation/`. Die Dateien erklären ihr Format selbst und
-bringen Beispiele für die Test-Geräte mit. Nach einer Änderung tippst du in der Konsole `automation neu`.
+Am einfachsten legst du beides im Dashboard unter **Automation** an: „Neue Szene“ oder „Neue Regel“, Gerät und
+Aktion auswählen, speichern. Bearbeiten und Löschen gehen über den Stift und den Mülleimer.
+
+Gespeichert wird in zwei Textdateien in `plugins/Automation/`, die du auch von Hand bearbeiten kannst.
+Nach einer Änderung von Hand tippst du in der Konsole `automation neu`.
 
 ## Szenen – `szenen.txt`
 
