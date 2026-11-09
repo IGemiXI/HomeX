@@ -22,6 +22,7 @@ HomeX bedienen:
   homex adresse           Adresse des Dashboards und Zugangsschlüssel
   homex config <plugin>   Config eines Plugins bearbeiten, z. B.: homex config SmaSolar
   homex plugin aus <Name> Plugin abschalten (z. B. DummyGeraete), "an" schaltet es wieder ein
+  homex fernzugriff       HomeX von unterwegs erreichbar machen (Tailscale, mit HTTPS)
 TXT
 }
 
@@ -57,6 +58,10 @@ case "${1:-hilfe}" in
       echo "Quellcode fehlt in $BASE/src – install.sh nochmal ausführen." >&2; exit 1
     fi
     ;;
+  fernzugriff)
+    pruefe_root
+    bash "$BASE/src/installation/fernzugriff.sh"
+    ;;
   adresse)
     port=$(grep -s '^port=' "$SERVER/plugins/WebAPI/config.properties" | cut -d= -f2 | tr -d ' ')
     token=$(grep -s '^token=' "$SERVER/plugins/WebAPI/config.properties" | cut -d= -f2 | tr -d ' ')
@@ -72,6 +77,10 @@ case "${1:-hilfe}" in
       [ -n "$ip1" ] && echo "Direkt-Link (meldet sofort an): http://$ip1:$port/?token=$token"
     else
       echo "Zugangsschlüssel: entsteht beim ersten Start – gleich nochmal: homex adresse"
+    fi
+    if command -v tailscale >/dev/null && tailscale status >/dev/null 2>&1; then
+      ts=$(tailscale status --json | grep -m1 '"DNSName"' | cut -d'"' -f4 | sed 's/\.$//')
+      [ -n "$ts" ] && echo "Von unterwegs (Tailscale): https://$ts/" && [ -n "$token" ] && echo "  Direkt-Link: https://$ts/?token=$token"
     fi
     ;;
   config)

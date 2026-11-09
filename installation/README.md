@@ -47,6 +47,7 @@ Am Ende zeigt es die Adresse des Dashboards und den Zugangsschlüssel an. Beim e
 | `homex adresse` | Dashboard-Adresse, Zugangsschlüssel und Direkt-Link fürs Handy |
 | `homex config SmaSolar` | Config eines Plugins im Editor öffnen; `homex config homex` öffnet `homex.properties` |
 | `homex plugin aus DummyGeraete` | ein Plugin abschalten (bleibt auch nach Updates aus); `an` schaltet es wieder ein |
+| `homex fernzugriff` | HomeX von unterwegs erreichbar machen, siehe Schritt 6 |
 | `homex update` | neuesten Stand von GitHub holen, bauen und neu starten. **Einstellungen bleiben erhalten** |
 | `homex start` / `stop` / `neustart` / `status` | |
 
@@ -79,3 +80,15 @@ startet die Bridge und verbindet HomeX damit. Die Zugangsdaten bleiben nur auf d
 (`/opt/homex/bridge/.env`, nur für root lesbar).
 
 Die Anbindung an die Hisense-Cloud ist inoffiziell. Klappt sie nicht, zeigt das Skript das Log der Bridge an.
+
+## 6. Von unterwegs (Tailscale)
+
+Hinter Starlink gibt es keine Portfreigabe. Tailscale baut deshalb ein privates Netz zwischen deinem
+Handy und dem Server auf. Von außen ist HomeX nicht offen, nur deine eigenen Geräte kommen dran.
+Dazu gibt es echtes HTTPS, damit lässt sich HomeX auf dem Handy als richtige App installieren.
+
+1. Kostenloses Konto auf https://tailscale.com anlegen (z. B. mit Google).
+2. Im Container: `homex fernzugriff` und den Anweisungen folgen.
+   Beim ersten Mal sagt das Skript, welche zwei Zeilen auf dem Proxmox-Host einzutragen sind.
+3. Aufs Handy die App **Tailscale** installieren, mit demselben Konto anmelden, einschalten.
+4. Den Direkt-Link vom Skript am Handy öffnen und HomeX zum Startbildschirm hinzufügen.
