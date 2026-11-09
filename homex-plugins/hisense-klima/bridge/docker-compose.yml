@@ -14,11 +14,12 @@ services:
         BUILD_FROM: alpine:3.20
     container_name: connectlife-bridge
     restart: unless-stopped
+    # Zugangsdaten stehen in einer .env-Datei daneben (nicht ins Git!):
+    #   CONNECTLIFE_LOGIN=deine-connectlife@email.de
+    #   CONNECTLIFE_PASSWORD=dein-passwort
+    # Auf dem HomeX-Server erledigt das installation/klima-bridge.sh für dich.
+    env_file: .env
     ports:
-      - "8000:8000"
-    environment:
-      CONNECTLIFE_LOGIN: "deine-connectlife@email.de"
-      CONNECTLIFE_PASSWORD: "dein-connectlife-passwort"
-      LOG_LEVEL: "info"
+      - "127.0.0.1:8000:8000"
     # Nur die HTTP-API starten (MQTT braucht HomeX nicht)
     command: ["/bin/ash", "-c", "php artisan serve --port=8000 --host=0.0.0.0"]

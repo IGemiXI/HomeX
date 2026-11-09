@@ -37,7 +37,12 @@ homex/
     └── web-api/          REST-API + Dashboard (PWA) → baut WebAPI.jar
 ```
 
-## Bauen & Starten
+## Auf dem Server installieren (Proxmox/Debian)
+
+Für den Dauerbetrieb: siehe **[installation/README.md](installation/README.md)**. Ein Skript installiert Java,
+baut HomeX, richtet den Autostart ein und gibt dir den Befehl `homex` (Konsole, Log, Update).
+
+## Bauen & Starten (am PC)
 
 Voraussetzung: Java 25 (JDK) und Maven 3.6.3 oder neuer.
 

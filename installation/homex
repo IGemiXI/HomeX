@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# "homex" – HomeX auf dem Server bedienen. Liegt in /usr/local/bin/homex.
+set -uo pipefail
+
+BASE=/opt/homex
+SERVER="$BASE/server"
+NUTZER=homex
+
+als_homex() { runuser -u "$NUTZER" -- "$@"; }
+tm() { als_homex tmux -L homex "$@"; }
+pruefe_root() { [ "$(id -u)" -eq 0 ] || { echo "Bitte als root ausführen." >&2; exit 1; }; }
+
+hilfe() {
+  cat <<TXT
+HomeX bedienen:
+  homex konsole           HomeX-Konsole öffnen (verlassen: Strg+B, dann D – HomeX läuft weiter)
+  homex befehl <text>     einen Konsolenbefehl schicken, z. B.: homex befehl sma quelle modbus
+  homex log               Log live ansehen (verlassen: Strg+C)
+  homex status            läuft HomeX?
+  homex start | stop | neustart
+  homex update            neuesten Stand von GitHub holen, bauen, neu starten (Einstellungen bleiben)
+  homex adresse           Adresse des Dashboards und Zugangsschlüssel
+  homex config <plugin>   Config eines Plugins bearbeiten, z. B.: homex config SmaSolar
+  homex plugin aus <Name> Plugin abschalten (z. B. DummyGeraete), "an" schaltet es wieder ein
+TXT
+}
+
+case "${1:-hilfe}" in
+  konsole)
+    pruefe_root
+    if ! tm has-session -t homex 2>/dev/null; then echo "HomeX läuft nicht. Starten mit: homex start"; exit 1; fi
+    echo "Konsole verlassen, ohne HomeX zu beenden: Strg+B, dann D"
+    sleep 1
+    tm attach -t homex
+    ;;
+  befehl)
+    pruefe_root; shift
+    [ $# -gt 0 ] || { echo "Welcher Befehl? z. B.: homex befehl devices"; exit 1; }
+    tm has-session -t homex 2>/dev/null || { echo "HomeX läuft nicht."; exit 1; }
+    zeilen=$(wc -l < "$SERVER/logs/homex.log")
+    tm send-keys -t homex -l "$*"
+    tm send-keys -t homex Enter
+    sleep 2
+    tail -n +"$((zeilen + 1))" "$SERVER/logs/homex.log"
+    ;;
+  log)       tail -n 60 -F "$SERVER/logs/homex.log" ;;
+  status)    systemctl status homex --no-pager -l | head -15 ;;
+  start)     pruefe_root; systemctl start homex && echo "HomeX gestartet." ;;
+  stop)      pruefe_root; systemctl stop homex && echo "HomeX gestoppt." ;;
+  neustart|restart) pruefe_root; systemctl restart homex && echo "HomeX neu gestartet." ;;
+  update)
+    pruefe_root
+    if [ -f "$BASE/src/installation/install.sh" ]; then
+      git -C "$BASE/src" fetch -q origin && git -C "$BASE/src" reset -q --hard origin/main
+      bash "$BASE/src/installation/install.sh" </dev/null
+    else
+      echo "Quellcode fehlt in $BASE/src – install.sh nochmal ausführen." >&2; exit 1
+    fi
+    ;;
+  adresse)
+    port=$(grep -s '^port=' "$SERVER/plugins/WebAPI/config.properties" | cut -d= -f2 | tr -d ' ')
+    token=$(grep -s '^token=' "$SERVER/plugins/WebAPI/config.properties" | cut -d= -f2 | tr -d ' ')
+    port=${port:-8080}
+    echo "Dashboard:"
+    for ip in $(hostname -I 2>/dev/null); do
+      case "$ip" in *:*) continue ;; esac
+      echo "  http://$ip:$port/"
+    done
+    if [ -n "$token" ]; then
+      echo "Zugangsschlüssel: $token"
+      ip1=$(hostname -I 2>/dev/null | awk '{print $1}')
+      [ -n "$ip1" ] && echo "Direkt-Link (meldet sofort an): http://$ip1:$port/?token=$token"
+    else
+      echo "Zugangsschlüssel: entsteht beim ersten Start – gleich nochmal: homex adresse"
+    fi
+    ;;
+  config)
+    pruefe_root
+    [ -n "${2:-}" ] || { echo "Welches Plugin? z. B.: homex config SmaSolar"; ls "$SERVER/plugins" | grep -v '\.jar$' | grep -v deaktiviert; exit 1; }
+    datei="$SERVER/plugins/$2/config.properties"
+    [ "$2" = homex ] && datei="$SERVER/homex.properties"
+    [ -f "$datei" ] || { echo "$datei gibt es nicht (Plugin-Name richtig geschrieben? Groß/klein beachten)."; exit 1; }
+    ${EDITOR:-nano} "$datei"
+    chown "$NUTZER:$NUTZER" "$datei"
+    echo "Gespeichert. Übernehmen mit: homex befehl reload"
+    ;;
+  plugin)
+    pruefe_root
+    aktion=${2:-}; name=${3:-}
+    [ -n "$name" ] || { echo "Benutzung: homex plugin aus|an <Name>"; exit 1; }
+    case "$aktion" in
+      aus) [ -f "$SERVER/plugins/$name.jar" ] || { echo "$name.jar nicht gefunden."; exit 1; }
+           mv "$SERVER/plugins/$name.jar" "$SERVER/plugins/deaktiviert/" && echo "$name ist aus (bleibt es auch nach Updates)." ;;
+      an)  [ -f "$SERVER/plugins/deaktiviert/$name.jar" ] || { echo "$name ist nicht deaktiviert."; exit 1; }
+           mv "$SERVER/plugins/deaktiviert/$name.jar" "$SERVER/plugins/" && echo "$name ist wieder an." ;;
+      *)   echo "Benutzung: homex plugin aus|an <Name>"; exit 1 ;;
+    esac
+    tm has-session -t homex 2>/dev/null && { tm send-keys -t homex -l reload; tm send-keys -t homex Enter; echo "HomeX lädt die Plugins neu."; }
+    ;;
+  hilfe|help|-h|--help|*) hilfe ;;
+esac
