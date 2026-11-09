@@ -165,6 +165,9 @@ Wants=network-online.target
 Type=forking
 User=$NUTZER
 WorkingDirectory=$SERVER
+# tmux startet Befehle über die Login-Shell – der Benutzer homex hat keine, also bash vorgeben
+Environment=SHELL=/bin/bash
+Environment=LANG=C.UTF-8
 ExecStart=/usr/bin/tmux -L homex -u new-session -d -s homex -x 200 -y 50 $BASE/start.sh
 ExecStop=$BASE/stop.sh
 Restart=on-failure

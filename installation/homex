@@ -6,7 +6,7 @@ BASE=/opt/homex
 SERVER="$BASE/server"
 NUTZER=homex
 
-als_homex() { runuser -u "$NUTZER" -- "$@"; }
+als_homex() { SHELL=/bin/bash runuser -u "$NUTZER" -- "$@"; }
 tm() { als_homex tmux -L homex "$@"; }
 pruefe_root() { [ "$(id -u)" -eq 0 ] || { echo "Bitte als root ausführen." >&2; exit 1; }; }
 
@@ -43,7 +43,7 @@ case "${1:-hilfe}" in
     sleep 2
     tail -n +"$((zeilen + 1))" "$SERVER/logs/homex.log"
     ;;
-  log)       tail -n 60 -F "$SERVER/logs/homex.log" ;;
+  log)       [ -f "$SERVER/logs/homex.log" ] || echo "Noch kein Log – läuft HomeX? (homex status)"; tail -n 60 -F "$SERVER/logs/homex.log" 2>/dev/null ;;
   status)    systemctl status homex --no-pager -l | head -15 ;;
   start)     pruefe_root; systemctl start homex && echo "HomeX gestartet." ;;
   stop)      pruefe_root; systemctl stop homex && echo "HomeX gestoppt." ;;
