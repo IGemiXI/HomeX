@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(zeigen, 200); });
 
   if (zustand.token) laden(); else loginZeigen();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  appAktuellHalten();
 });
 
 function loginZeigen(meldung) {
@@ -204,11 +204,75 @@ async function laden() {
   }
 }
 
+// =====================================================================
+// Handy-App: immer aktuell bleiben
+// =====================================================================
+
+let letzteNachricht = 0;
+let versteckSeit = 0;
+
+/**
+ * Auf dem Handy wird die App im Hintergrund eingefroren und die Live-Verbindung bricht still ab.
+ * Deshalb: beim Zurückkehren sofort neu verbinden, eine eingeschlafene Verbindung erkennen
+ * und neue Versionen des Dashboards automatisch übernehmen.
+ */
+function appAktuellHalten() {
+  // 1. Neue Dashboard-Version: der Service Worker holt sie, die Seite lädt einmal neu
+  if ("serviceWorker" in navigator) {
+    const hatteSchonEinen = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((reg) => {
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+    let neuGeladen = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hatteSchonEinen && !neuGeladen) { neuGeladen = true; location.reload(); }
+    });
+  }
+
+  // 2. Zurück aus dem Hintergrund → alles frisch holen und neu verbinden
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { versteckSeit = Date.now(); return; }
+    if (!zustand.token) return;
+    const lange = versteckSeit && Date.now() - versteckSeit > 15_000;
+    if (lange || !zustand.quelle || zustand.quelle.readyState !== EventSource.OPEN) auffrischen();
+  });
+  window.addEventListener("online", () => zustand.token && auffrischen());
+  window.addEventListener("pageshow", (e) => { if (e.persisted && zustand.token) auffrischen(); });
+
+  // 3. Wächter: der Server meldet sich alle 20 s – bleibt das aus, ist die Verbindung tot
+  setInterval(() => {
+    if (!zustand.token || document.hidden || !zustand.quelle) return;
+    if (letzteNachricht && Date.now() - letzteNachricht > 50_000) auffrischen();
+  }, 10_000);
+}
+
+let auffrischenLaeuft = false;
+async function auffrischen() {
+  if (auffrischenLaeuft) return;
+  auffrischenLaeuft = true;
+  status("start", "Aktualisiere …");
+  try {
+    const [info, akt] = await Promise.all([api("/api/info"), api("/api/activity?limit=150")]);
+    zustand.info = info;
+    zustand.aktivitaet = akt;
+    melde("__info"); melde("__aktivitaet"); fehlerZaehler();
+    live();                              // der Snapshot beim Verbinden bringt alle Geräte auf Stand
+  } catch (err) {
+    if (err.status === 401) { merken(null); loginZeigen("Bitte melde dich erneut an."); }
+    else status("weg", "HomeX nicht erreichbar");
+  } finally {
+    auffrischenLaeuft = false;
+  }
+}
+
 function live() {
   zustand.quelle?.close();
   const q = new EventSource(API + "/api/events?token=" + encodeURIComponent(zustand.token));
   zustand.quelle = q;
-  q.onopen = () => status("live", "Live verbunden");
+  letzteNachricht = Date.now();
+  const lebt = () => { letzteNachricht = Date.now(); };
+  ["snapshot", "state", "device", "removed", "activity", "plugins", "ping"].forEach((t) => q.addEventListener(t, lebt));
+  q.onopen = () => { lebt(); status("live", "Live verbunden"); };
   q.onerror = async () => {
     status("weg", "Verbindung unterbrochen …");
     try { await api("/api/info"); } catch (err) {

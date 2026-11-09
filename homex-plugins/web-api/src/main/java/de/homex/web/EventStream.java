@@ -57,7 +57,7 @@ final class EventStream {
             while (true) {
                 String msg = q.poll(20, TimeUnit.SECONDS);
                 if (msg == ENDE) break;
-                schreiben(out, msg == null ? ": ping\n\n" : msg);   // Ping hält die Verbindung offen
+                schreiben(out, msg == null ? "event: ping\ndata: {}\n\n" : msg);   // Lebenszeichen: hält die Verbindung offen, die App merkt, dass sie lebt
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

@@ -589,7 +589,14 @@ table.daten td.zahl, table.daten th.zahl { text-align: right; font-family: var(-
     border-right: 0; border-top: 1px solid var(--kante);
     background: rgba(8,12,30,.94); backdrop-filter: blur(12px);
   }
-  .marke, .nav-status { display: none; }
+  .marke { display: none; }
+  .nav-status { display: none; }
+  /* Am Handy nur sichtbar, wenn die Verbindung weg ist – als Hinweis über der Leiste */
+  .nav-status[data-zustand="weg"], .nav-status[data-zustand="start"] {
+    display: flex; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    margin: 0; padding: 6px 12px; border-radius: 999px; white-space: nowrap; font-size: .8rem;
+    background: var(--panel-hoch); border: 1px solid var(--kante-hell); color: var(--text);
+  }
   .nav-liste { display: flex; width: 100%; gap: 0; }
   .nav-liste li { flex: 1; }
   .nav-liste li.nur-gross { display: none; }
