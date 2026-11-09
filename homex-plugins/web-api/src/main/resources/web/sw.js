@@ -1,5 +1,5 @@
 /* Service Worker: hält die Oberfläche offline verfügbar. API-Daten werden NIE zwischengespeichert. */
-const CACHE = "homex-v3";
+const CACHE = "homex-v4";
 const SHELL = ["./", "index.html", "app.css", "app.js", "icons.js", "charts.js", "icon.svg", "icon-192.png", "icon-512.png", "manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {

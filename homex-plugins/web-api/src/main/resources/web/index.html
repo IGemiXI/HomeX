@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>HomeX</title>
   <meta name="description" content="HomeX – dein Smarthome">
-  <meta name="theme-color" content="#060A1A">
+  <meta name="theme-color" content="#1A120C">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="HomeX">
@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -27,20 +27,14 @@
       <a class="marke" href="#/" aria-label="HomeX Übersicht">
         <svg class="marke-hex" viewBox="0 0 48 48" aria-hidden="true">
           <defs>
-            <linearGradient id="markeNeon" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#3DB2FF"/>
-              <stop offset=".45" stop-color="#9D72FF"/>
-              <stop offset=".75" stop-color="#FF4FB0"/>
-              <stop offset="1" stop-color="#FFA24A"/>
-            </linearGradient>
-            <linearGradient id="markeMetall" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#2A3566"/>
-              <stop offset=".5" stop-color="#141B3D"/>
-              <stop offset="1" stop-color="#222C58"/>
+            <linearGradient id="markeMessing" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#EBD39E"/>
+              <stop offset=".45" stop-color="#C49A55"/>
+              <stop offset="1" stop-color="#8A6430"/>
             </linearGradient>
           </defs>
-          <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="url(#markeMetall)" stroke="url(#markeNeon)" stroke-width="2.6" stroke-linejoin="round"/>
-          <path d="M17.5 16.5 30.5 31.5M30.5 16.5 17.5 31.5" stroke="url(#markeNeon)" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="none" stroke="url(#markeMessing)" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M17.5 16.5 30.5 31.5M30.5 16.5 17.5 31.5" stroke="url(#markeMessing)" stroke-width="2.8" stroke-linecap="round"/>
         </svg>
         <span>HomeX</span>
       </a>
@@ -72,8 +66,8 @@
   <dialog id="login" class="login" aria-labelledby="login-titel">
     <form id="login-form" method="dialog">
       <svg class="login-hex" viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="none" stroke="url(#markeNeon)" stroke-width="2.6" stroke-linejoin="round"/>
-        <path d="M17.5 16.5 30.5 31.5M30.5 16.5 17.5 31.5" stroke="url(#markeNeon)" stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M24 3 42 13.5v21L24 45 6 34.5v-21Z" fill="none" stroke="url(#markeMessing)" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M17.5 16.5 30.5 31.5M30.5 16.5 17.5 31.5" stroke="url(#markeMessing)" stroke-width="3.2" stroke-linecap="round"/>
       </svg>
       <h2 id="login-titel">Bei HomeX anmelden</h2>
       <p>Den Zugangsschlüssel zeigt HomeX beim Start in der Konsole. Er steht auch in

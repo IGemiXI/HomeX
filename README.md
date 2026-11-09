@@ -5,9 +5,9 @@ werden beim Start geladen und über `onLoad()` → `onEnable()` → `onDisable()
 
 ![HomeX Dashboard](docs/dashboard-desktop.png)
 
-| Energie (mit Testdaten) | Automation | Handy |
-|---|---|---|
-| ![Energie](docs/dashboard-energie.png) | ![Automation](docs/dashboard-automation.png) | ![Handy](docs/dashboard-handy.png) |
+| Energie (mit Testdaten) | Handy |
+|---|---|
+| ![Energie](docs/dashboard-energie.png) | ![Handy](docs/dashboard-handy.png) |
 
 ## Projektaufbau
 

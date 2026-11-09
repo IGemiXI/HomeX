@@ -5,17 +5,19 @@ const API = "";
 const TOKEN_KEY = "homex-token";
 const CLIENT = "Dashboard";
 
+/** Seiten der App. "sichtbar" blendet Seiten aus, für die es (noch) keine Geräte gibt. */
 const SEITEN = [
-  { pfad: "", titel: "Übersicht", icon: "uebersicht" },
+  { pfad: "", titel: "Übersicht", icon: "haus" },
   { pfad: "energie", titel: "Energie", icon: "energie" },
   { pfad: "klima", titel: "Klima", icon: "klima" },
-  { pfad: "automation", titel: "Automation", icon: "automation" },
-  { pfad: "aktivitaet", titel: "Aktivität", icon: "aktivitaet" },
+  { pfad: "automation", titel: "Automation", icon: "automation", sichtbar: () => nachTyp("SCENE", "AUTOMATION").length > 0 },
+  { pfad: "aktivitaet", titel: "Verlauf", icon: "aktivitaet" },
   { pfad: "system", titel: "System", icon: "system" },
 ];
+const seiteSichtbar = (s) => !s.sichtbar || s.sichtbar();
 
 const MODI = [["kuehlen", "Kühlen"], ["heizen", "Heizen"], ["entfeuchten", "Entfeuchten"], ["lueften", "Lüften"], ["auto", "Auto"]];
-const MODUS_FARBE = { kuehlen: "var(--kuehl)", entfeuchten: "var(--kuehl)", heizen: "var(--heiss)", auto: "var(--violett)", lueften: "#7FD8FF" };
+const MODUS_FARBE = { kuehlen: "var(--kuehl)", entfeuchten: "var(--kuehl)", heizen: "var(--heiss)", auto: "var(--messing)", lueften: "var(--batterie)" };
 const LUEFTER = [["auto", "Auto"], ["sehr_leise", "Sehr leise"], ["leise", "Leise"], ["mittel", "Mittel"], ["hoch", "Hoch"], ["sehr_hoch", "Sehr hoch"]];
 const NICHT_IN_RAEUMEN = new Set(["SCENE", "AUTOMATION", "WEATHER", "SOLAR_INVERTER", "POWER_METER", "BATTERY"]);
 
@@ -108,9 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   zustand.token = lesen();
 
-  $("nav-liste").replaceChildren(...SEITEN.map((s) =>
-    h("li", {}, h("a", { href: "#/" + s.pfad, "data-pfad": s.pfad }, ic(s.icon), h("span", {}, s.titel),
-      s.pfad === "aktivitaet" ? h("span", { class: "nav-zahl", id: "nav-fehler" }) : null))));
 
   $("login-form").addEventListener("submit", anmelden);
   $("blatt-zu").innerHTML = icon("schliessen");
@@ -386,10 +385,13 @@ function zeigen() {
   seitenAufraeumen.forEach((f) => f());
   seitenAufraeumen = [];
   const pfad = location.hash.replace(/^#\/?/, "");
-  const seite = SEITEN.find((s) => s.pfad === pfad) || SEITEN[0];
-  document.querySelectorAll("#nav-liste a").forEach((a) => {
-    if (a.dataset.pfad === seite.pfad) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
-  });
+  const seite = SEITEN.find((s) => s.pfad === pfad && seiteSichtbar(s)) || SEITEN[0];
+  $("nav-liste").replaceChildren(...SEITEN.filter(seiteSichtbar).map((s) =>
+    h("li", {},
+      h("a", { href: "#/" + s.pfad, "data-pfad": s.pfad, "aria-current": s.pfad === seite.pfad ? "page" : null },
+        ic(s.icon), h("span", {}, s.titel),
+        s.pfad === "aktivitaet" ? h("span", { class: "nav-zahl", id: "nav-fehler" }) : null))));
+
   document.title = (seite.pfad ? seite.titel + " – " : "") + "HomeX";
 
   const ziel = $("seite");
@@ -431,42 +433,90 @@ function gruss() {
 }
 
 function seiteUebersicht() {
-  const geraete = [...zustand.geraete.values()].filter((d) => !NICHT_IN_RAEUMEN.has(d.type));
-  const raeume = new Map();
-  for (const d of geraete) {
-    const r = d.room || "Ohne Raum";
-    if (!raeume.has(r)) raeume.set(r, []);
-    raeume.get(r).push(d);
-  }
-  const reihenfolge = [...raeume.keys()].sort((a, b) =>
-    a === "Ohne Raum" ? 1 : b === "Ohne Raum" ? -1 : a.localeCompare(b, "de"));
-
-  const unter = h("p", { class: "kopf-unter" });
-  const aktualisiereUnter = () => {
-    const an = [...zustand.geraete.values()].filter((d) => d.type === "LIGHT" && d.states.power === true).length;
-    const datum = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
-    unter.textContent = `${zustand.info?.haus || "Mein Zuhause"}, ${datum}. ` +
-      (an === 0 ? "Alle Lichter sind aus." : an === 1 ? "1 Licht ist an." : `${an} Lichter sind an.`);
-  };
-  geraete.forEach((d) => beobachten(d.id, aktualisiereUnter));
-
+  const datum = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
   const kopfEl = h("header", { class: "kopf" },
-    h("div", {}, h("h1", {}, gruss()), unter),
+    h("div", {}, h("p", { class: "kopf-ueber" }, zustand.info?.haus || "Mein Zuhause"), h("h1", {}, gruss()),
+      h("p", { class: "kopf-unter" }, datum)),
     h("div", { class: "kopf-rechts" }, wetterChip()));
 
-  const szenen = nachTyp("SCENE");
-  const haupt = h("div", {},
-    szenen.length ? h("div", { class: "szenen", role: "group", "aria-label": "Szenen" }, szenen.map(szeneKnopf)) : null,
-    geraete.length
-      ? h("section", { class: "abschnitt" },
-          h("div", { class: "raeume" }, reihenfolge.map((r) => raumKarte(r, raeume.get(r)))),
-          h("p", { class: "hinweis-zeile" }, "Tippen schaltet. Gedrückt halten oder Rechtsklick öffnet die Einstellungen."))
-      : h("div", { class: "leer-gross abschnitt" },
-          h("h3", {}, "Noch keine Geräte"),
-          h("p", {}, "Lege Plugins wie DummyGeraete, HisenseKlima oder SmaSolar in den Ordner plugins/ und starte HomeX neu.")));
+  const klimas = nachTyp("CLIMATE");
+  const sonstige = [...zustand.geraete.values()]
+    .filter((d) => !NICHT_IN_RAEUMEN.has(d.type) && d.type !== "CLIMATE")
+    .sort((a, b) => (a.room || "~").localeCompare(b.room || "~", "de") || a.name.localeCompare(b.name, "de"));
 
-  return h("div", {}, kopfEl, h("div", { class: "uebersicht" }, haupt,
-    h("aside", { class: "seitenspalte" }, energiePanel(), aktivitaetPanel())));
+  const teile = [kopfEl, solarKarte()];
+  teile.push(abschnitt("Klima", klimaZusammenfassung(klimas),
+    klimas.length ? h("div", { class: "klimas" }, klimas.map((d) => klimaKarte(d, true)))
+      : h("div", { class: "leer-gross" }, h("h3", {}, "Noch keine Klimaanlage verbunden"),
+          h("p", {}, "Richte die ConnectLife-Bridge ein (installation/klima-bridge.sh), dann erscheinen deine Klimas hier."))));
+  if (sonstige.length) teile.push(abschnitt("Geräte", null, h("div", { class: "panel liste" }, sonstige.map(geraetZeile))));
+  return h("div", { class: "uebersicht" }, teile);
+}
+
+function klimaZusammenfassung(klimas) {
+  const el = h("span");
+  const zaehlen = () => {
+    const an = klimas.filter((d) => zustand.geraete.get(d.id)?.states.power === true).length;
+    el.textContent = klimas.length ? (an ? `${an} von ${klimas.length} laufen` : "alle aus") : "";
+  };
+  klimas.forEach((d) => beobachten(d.id, zaehlen));
+  return el;
+}
+
+/** Die große Solar-Karte oben in der Übersicht: was gerade reinkommt und wohin es geht. */
+function solarKarte() {
+  const karte = h("a", { class: "solar-karte", href: "#/energie", "aria-label": "Energie – Details öffnen" });
+  const zeichnen = () => {
+    const g = solar();
+    const s = g?.states;
+    const ws = wetter()?.states;
+    if (!s || ["WARTET", "START"].includes(s.status)) {
+      karte.replaceChildren(
+        h("div", { class: "solar-kopf" }, h("span", { class: "solar-titel" }, ic("sonne"), "Solaranlage")),
+        h("p", { class: "solar-warten" }, !g ? "Noch keine Solaranlage verbunden."
+          : "Wartet auf die Verbindung zum Wechselrichter. Sobald Modbus aktiv ist: homex befehl sma quelle modbus"));
+      return;
+    }
+    const offline = s.status === "OFFLINE";
+    const pv = s.pv_w ?? s.ac_w;
+    const netz = istZahl(s.netzbezug_w) || istZahl(s.einspeisung_w) ? (s.netzbezug_w || 0) - (s.einspeisung_w || 0) : null;
+    const batt = (s.batterie_laden_w || 0) - (s.batterie_entladen_w || 0);
+    const [pz, pe] = leistung(pv);
+    const unter = [];
+    if (istZahl(s.ertrag_heute_kwh)) unter.push(`Heute ${zahl(s.ertrag_heute_kwh, 1)} kWh erzeugt`);
+    if (ws && istZahl(ws.heute_pv_prognose_kwh)) unter.push(`Prognose ≈ ${ws.heute_pv_prognose_kwh} kWh`);
+    if (offline) unter.unshift("Wechselrichter gerade nicht erreichbar");
+
+    const kachel = (cls, sym, titel, wert, zusatz, balken) => h("div", { class: "solar-kachel " + cls },
+      h("span", { class: "kachel-titel" }, ic(sym), titel),
+      h("strong", {}, wert[0], h("small", {}, wert[1])),
+      balken != null ? h("span", { class: "balken", style: { "--wert": Math.max(0, Math.min(100, balken)) + "%" } }) : null,
+      h("span", { class: "kachel-zusatz" }, zusatz || "\u00a0"));
+
+    const eigen = istZahl(s.verbrauch_w) && s.verbrauch_w > 0 && istZahl(s.netzbezug_w)
+      ? Math.max(0, Math.min(100, 100 * (1 - s.netzbezug_w / s.verbrauch_w))) : null;
+
+    karte.classList.toggle("offline", offline);
+    karte.replaceChildren(
+      h("div", { class: "solar-kopf" },
+        h("span", { class: "solar-titel" }, ic("sonne"), "Solar jetzt"),
+        h("span", { class: "solar-mehr" }, "Details")),
+      h("div", { class: "solar-gross" }, h("strong", {}, pz), h("span", {}, pe)),
+      h("p", { class: "solar-unter" }, unter.join(" · ") || "\u00a0"),
+      h("div", { class: "solar-kacheln" },
+        kachel("haus", "haus", "Hausverbrauch", leistung(s.verbrauch_w),
+          eigen != null ? `${zahl(eigen)} % aus eigenem Strom` : null),
+        kachel("batterie", "batterie", "Batterie", istZahl(s.batterie_soc) ? [zahl(s.batterie_soc), "%"] : ["–", ""],
+          Math.abs(batt) < 20 ? "ruht" : (batt > 0 ? "lädt " : "entlädt ") + leistung(batt).join(" "),
+          istZahl(s.batterie_soc) ? s.batterie_soc : null),
+        kachel("netz", "netz", "Netz", leistung(netz),
+          !istZahl(netz) ? null : Math.abs(netz) < 20 ? "kein Austausch" : netz > 0 ? "Bezug" : "Einspeisung")));
+  };
+  const g = solar(), w = wetter();
+  if (g) beobachten(g.id, zeichnen);
+  if (w) beobachten(w.id, zeichnen);
+  zeichnen();
+  return karte;
 }
 
 function wetterChip() {
@@ -500,177 +550,44 @@ async function szeneStarten(id, el) {
   if (ok) melden(`Szene „${d.name}“: ${d.states.ergebnis || "ausgeführt"}`, true);
 }
 
-function raumKarte(raum, geraete) {
-  geraete.sort((a, b) => typRang(a) - typRang(b) || a.name.localeCompare(b.name, "de"));
-  const neben = h("span", { class: "neben" });
-  const zaehlen = () => {
-    const schaltbar = geraete.filter((d) => "power" in d.states && d.type !== "CLIMATE");
-    const an = schaltbar.filter((d) => d.states.power === true).length;
-    neben.textContent = schaltbar.length ? (an ? `${an} von ${schaltbar.length} an` : "alles aus") : "";
-    neben.classList.toggle("aktiv", an > 0);
-  };
-  geraete.forEach((d) => beobachten(d.id, zaehlen));
-  return h("section", { class: "raum", "aria-label": raum },
-    h("div", { class: "raum-kopf" }, h("h3", {}, raum), neben),
-    wabenfeld(geraete));
-}
-
-function typRang(d) { return ({ LIGHT: 0, SWITCH: 1, SHUTTER: 2, CLIMATE: 3 })[d.type] ?? 4; }
-
-// ----------------------------------------------------------------- Waben
-
-/** Ordnet die Waben als Bienenwabe an: jede zweite Reihe um eine halbe Wabe versetzt. */
-function wabenfeld(geraete) {
-  const feld = h("div", { class: "wabenfeld" });
-  const waben = geraete.map((d, i) => { const w = wabe(d); w.style.setProperty("--n", i); return w; });
-  feld.append(...waben);
-  const anordnen = () => {
-    const cs = getComputedStyle(feld);
-    const wb = parseFloat(cs.getPropertyValue("--wb")) || 112;
-    const gap = parseFloat(cs.getPropertyValue("--luecke")) || 8;
-    const halb = (wb + gap) / 2;
-    const n = Math.max(1, Math.floor((feld.clientWidth / halb - 1) / 2));
-    feld.style.setProperty("--halbe", 2 * n + 1);
-    waben.forEach((w, i) => {
-      const r = Math.floor(i / n), c = i % n;
-      w.style.setProperty("--spalte", 2 * c + 1 + (r % 2));
-      w.style.setProperty("--zeile", r + 1);
-    });
-  };
-  const ro = new ResizeObserver(anordnen);
-  ro.observe(feld);
-  seitenAufraeumen.push(() => ro.disconnect());
-  return feld;
-}
-
-/** "Klima Wohnzimmer" im Raum Wohnzimmer → "Klima" (der Raum steht ja schon darüber) */
-function kurzName(d) {
-  if (!d.room) return d.name;
-  const rest = d.name.replace(new RegExp("\\s*" + d.room.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*", "i"), " ").trim();
-  return rest || d.name;
-}
-
 function art(d) {
   return ({ LIGHT: "licht", SWITCH: "steckdose", SHUTTER: "rollladen", CLIMATE: "klima", SENSOR: "sensor" })[d.type] || "geraet";
 }
 
-function wabe(d) {
+/** Eine Zeile für Lichter, Steckdosen, Rollläden usw. – Schalter rechts, Antippen öffnet die Details. */
+function geraetZeile(d) {
   const a = art(d);
-  const name = h("span", { class: "wabe-name" });
-  const wert = h("span", { class: "wabe-wert" });
-  const lamellen = a === "rollladen" ? h("span", { class: "wabe-lamellen" }) : null;
-  const kern = h("span", { class: "wabe-kern" }, lamellen, h("span", { html: icon(a === "sensor" ? "sensor" : a), style: { display: "contents" } }), name, wert);
-  const b = h("button", { class: "wabe", type: "button", "data-art": a, "data-id": d.id }, h("span", { class: "wabe-rand" }), kern);
-
-  // Tippen = schalten, gedrückt halten / Rechtsklick = Einstellungen
-  let halteTimer = null, gehalten = false;
-  b.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    gehalten = false;
-    halteTimer = setTimeout(() => { gehalten = true; blattOeffnen(d.id); }, 480);
-  });
-  const abbrechen = () => clearTimeout(halteTimer);
-  b.addEventListener("pointerup", abbrechen);
-  b.addEventListener("pointerleave", abbrechen);
-  b.addEventListener("pointercancel", abbrechen);
-  b.addEventListener("contextmenu", (e) => { e.preventDefault(); abbrechen(); blattOeffnen(d.id); });
-  b.addEventListener("click", () => {
-    if (gehalten) { gehalten = false; return; }
-    tippen(zustand.geraete.get(d.id), b);
-  });
-
+  const name = h("strong"), info = h("span");
+  const umschaltbar = d.type === "LIGHT" || d.type === "SWITCH";
+  const schalter = umschaltbar ? h("button", { class: "schalter", type: "button", role: "switch" }) : null;
+  const zeile = h("div", { class: "geraet-zeile", "data-id": d.id },
+    h("button", { class: "geraet-oeffnen", type: "button" }, h("span", { class: "geraet-symbol", html: icon(a === "sensor" ? "sensor" : a) }),
+      h("span", { class: "geraet-text" }, name, info)),
+    schalter);
+  zeile.querySelector(".geraet-oeffnen").addEventListener("click", () => blattOeffnen(d.id));
+  schalter?.addEventListener("click", () => senden(d.id, "power", !(zustand.geraete.get(d.id).states.power === true), zeile));
   beobachten(d.id, (g) => {
     if (!g) return;
     const s = g.states;
-    const offline = s.online === false;
-    let an = false, text = "", staerke = 1;
-    switch (g.type) {
-      case "LIGHT":
-        an = s.power === true;
-        staerke = an && istZahl(s.helligkeit) ? 0.25 + 0.75 * s.helligkeit / 100 : 1;
-        text = an ? (istZahl(s.helligkeit) ? s.helligkeit + " %" : "an") : "aus";
-        break;
-      case "SWITCH":
-        an = s.power === true; text = an ? "an" : "aus"; break;
-      case "SHUTTER": {
-        const pos = istZahl(s.position) ? s.position : 100;
-        const faehrt = s.bewegung && s.bewegung !== "steht";
-        an = faehrt;
-        b.classList.toggle("faehrt", !!faehrt);
-        lamellen.style.setProperty("--zu", (100 - pos) * 0.86 + "%");
-        text = faehrt ? (s.bewegung === "faehrt_auf" ? "fährt hoch" : "fährt runter") : pos >= 100 ? "offen" : pos <= 0 ? "zu" : pos + " % offen";
-        break;
-      }
-      case "CLIMATE":
-        an = s.power === true && !offline;
-        b.dataset.modus = s.modus || "";
-        text = offline ? "offline" : (istZahl(s.ist_temp) ? zahl(s.ist_temp) + "°" : "") + (an ? " " + (MODI.find((m) => m[0] === s.modus)?.[1] || "") : " aus");
-        break;
-      default: {
-        const zahlWert = Object.entries(s).find(([, v]) => istZahl(v));
-        text = zahlWert ? zahl(zahlWert[1], 1) : "";
-      }
-    }
-    name.textContent = kurzName(g);
-    wert.textContent = text.trim();
-    b.classList.toggle("an", an);
-    b.classList.toggle("offline", offline);
-    b.style.setProperty("--staerke", staerke.toFixed(2));
-    const umschaltbar = g.type === "LIGHT" || g.type === "SWITCH";
-    if (umschaltbar) b.setAttribute("aria-pressed", String(an)); else b.removeAttribute("aria-pressed");
-    b.setAttribute("aria-label", `${g.name}${g.room ? ", " + g.room : ""}: ${wert.textContent}` +
-      (umschaltbar ? "" : ". Antippen öffnet die Einstellungen"));
-  });
-  return b;
-}
-
-/** Was passiert beim Antippen einer Wabe? */
-function tippen(d, el) {
-  if (!d) return;
-  const s = d.states;
-  if (d.type === "LIGHT" || d.type === "SWITCH") return senden(d.id, "power", !(s.power === true), el);
-  if (d.type === "SHUTTER") {
-    if (s.bewegung && s.bewegung !== "steht") return senden(d.id, "fahren", "stopp", el);
-    return senden(d.id, "fahren", (s.position ?? 100) >= 50 ? "zu" : "auf", el);
-  }
-  blattOeffnen(d.id);
-}
-
-// ----------------------------------------------------------------- Seitenspalte
-
-function energiePanel() {
-  const s = solar(), w = wetter();
-  const inhalt = h("div", { class: "mini-energie" });
-  const zeichnen = () => {
-    const ss = solar()?.states, ws = wetter()?.states;
-    const zeilen = [];
-    if (ss && ss.status !== "WARTET" && ss.status !== "START") {
-      zeilen.push(miniZeile("sonne", "var(--sonne)", "Solar jetzt", leistung(ss.pv_w ?? ss.ac_w).join(" ")));
-      if (istZahl(ss.verbrauch_w)) zeilen.push(miniZeile("haus", "var(--text)", "Verbrauch", leistung(ss.verbrauch_w).join(" ")));
-      if (istZahl(ss.batterie_soc)) zeilen.push(miniZeile("batterie", "var(--violett)", "Batterie", zahl(ss.batterie_soc) + " %"));
+    let text = "";
+    if (umschaltbar) text = s.power === true ? (istZahl(s.helligkeit) ? `an, ${s.helligkeit} %` : "an") : "aus";
+    else if (g.type === "SHUTTER") {
+      const pos = istZahl(s.position) ? s.position : 100;
+      text = s.bewegung && s.bewegung !== "steht" ? (s.bewegung === "faehrt_auf" ? "fährt hoch" : "fährt runter")
+        : pos >= 100 ? "offen" : pos <= 0 ? "geschlossen" : `${pos} % offen`;
     } else {
-      zeilen.push(h("p", { class: "leer" }, ss ? "Die Solaranlage wartet noch auf ihren Zugang." : "Noch keine Solaranlage verbunden."));
+      const z = Object.entries(s).find(([, v]) => istZahl(v));
+      text = z ? `${z[0].replace(/_/g, " ")} ${zahl(z[1], 1)}` : "";
     }
-    if (ws && istZahl(ws.heute_pv_prognose_kwh)) zeilen.push(miniZeile("wolkig", "var(--sonne)", "PV-Prognose heute", "≈ " + ws.heute_pv_prognose_kwh + " kWh"));
-    else if (ws && istZahl(ws.heute_sonnenenergie_kwh_m2)) zeilen.push(miniZeile("klar", "var(--sonne)", "Sonne heute", ws.heute_sonnenenergie_kwh_m2 + " kWh/m²"));
-    inhalt.replaceChildren(...zeilen);
-  };
-  if (s) beobachten(s.id, zeichnen);
-  if (w) beobachten(w.id, zeichnen);
-  zeichnen();
-  return h("section", { class: "panel" }, h("h2", {}, "Energie", h("a", { href: "#/energie" }, "Details")), inhalt);
-}
-
-function miniZeile(sym, farbe, text, wert) {
-  return h("div", { class: "mini-energie-zeile" }, h("span", { html: icon(sym), style: { display: "contents", color: farbe } }),
-    h("span", {}, text), h("strong", {}, wert));
-}
-
-function aktivitaetPanel() {
-  const liste = h("ul", { class: "feed" });
-  const zeichnen = () => liste.replaceChildren(...zustand.aktivitaet.slice(0, 8).map(feedEintrag));
-  beobachten("__aktivitaet", zeichnen);
-  return h("section", { class: "panel" }, h("h2", {}, "Zuletzt passiert", h("a", { href: "#/aktivitaet" }, "Alles")), liste);
+    name.textContent = g.name;
+    info.textContent = [g.room, text].filter(Boolean).join(" · ");
+    zeile.classList.toggle("an", s.power === true);
+    if (schalter) {
+      schalter.setAttribute("aria-checked", String(s.power === true));
+      schalter.setAttribute("aria-label", `${g.name} ${s.power === true ? "ausschalten" : "einschalten"}`);
+    }
+  });
+  return zeile;
 }
 
 function feedEintrag(a) {
@@ -699,7 +616,7 @@ function seiteEnergie() {
   // Energiefluss
   const svg = flussAufbauen();
   const fakten = h("dl", { class: "kennzahlen" });
-  teile.push(h("section", { class: "abschnitt energie-oben" }, svg, fakten));
+  teile.push(h("section", { class: "abschnitt panel energie-oben" }, svg, fakten));
   const zeichnen = () => flussZeichnen(svg, fakten);
   if (s) beobachten(s.id, zeichnen); else zeichnen();
 
@@ -905,7 +822,8 @@ function seiteKlima() {
 
 const sollWartet = new Map();
 
-function klimaKarte(d) {
+/** kompakt = in der Übersicht: ohne Lüfter/Extras; Antippen des Namens öffnet alle Einstellungen. */
+function klimaKarte(d, kompakt = false) {
   const titel = h("h3"), info = h("p");
   const ist = h("div", { class: "klima-ist", "aria-label": "Raumtemperatur" });
   const sollWert = h("output", { "aria-live": "polite" });
@@ -922,8 +840,8 @@ function klimaKarte(d) {
     return [k, sw];
   });
 
-  const karte = h("article", { class: "klima-karte", "data-id": d.id },
-    h("div", { class: "klima-name" }, titel, info), ist,
+  const karte = h("article", { class: "klima-karte" + (kompakt ? " kompakt" : ""), "data-id": d.id },
+    h(kompakt ? "button" : "div", { class: "klima-name", type: kompakt ? "button" : null, onclick: kompakt ? () => blattOeffnen(d.id) : null }, titel, info), ist,
     h("div", { class: "klima-soll" }, minus, sollWert, plus),
     h("div", { class: "klima-schalter" }, schalter),
     h("div", { class: "klima-modi segmente", role: "group", "aria-label": "Modus" }, modi),
