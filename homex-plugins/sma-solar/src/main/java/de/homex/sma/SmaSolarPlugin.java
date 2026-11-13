@@ -80,7 +80,7 @@ public class SmaSolarPlugin extends JavaPlugin {
                     zahl(c, "modbus.seriennummer", 0),
                     getLogger(),
                     ip -> configWertSetzen("modbus.zuletzt-gefunden", ip));
-            intervall = Math.max(1, zahl(c, "intervall.modbus", 5));
+            intervall = Math.max(1, zahl(c, "intervall.modbus", 15));
         }
 
         fehlerInFolge = 0;

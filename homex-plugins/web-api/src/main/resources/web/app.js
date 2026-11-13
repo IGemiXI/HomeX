@@ -274,7 +274,14 @@ function live() {
   q.onopen = () => { lebt(); status("live", "Live verbunden"); };
   q.onerror = async () => {
     status("weg", "Verbindung unterbrochen …");
-    try { await api("/api/info"); } catch (err) {
+    try {
+      await api("/api/info");
+      // Server ist erreichbar, aber der Live-Kanal ist endgültig zu (z. B. vom Server rausgeworfen) →
+      // nicht auf den Wächter (bis zu 60 s) warten, sondern gleich neu verbinden
+      if (q.readyState === EventSource.CLOSED && zustand.quelle === q) setTimeout(() => {
+        if (zustand.quelle === q && !document.hidden) auffrischen();
+      }, 2000);
+    } catch (err) {
       if (err.status === 401) { q.close(); merken(null); loginZeigen("Bitte melde dich erneut an."); }
     }
   };

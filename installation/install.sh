@@ -118,6 +118,14 @@ for jar in "$SRC"/homex-plugins/*/target/*.jar; do
   fi
 done
 
+# Bestehende Einstellungen auf neue Standardwerte heben – nur wenn noch der
+# alte Standard drinsteht, selbst gewählte Werte bleiben unangetastet.
+SMA_CFG="$SERVER/plugins/SmaSolar/config.properties"
+if [ -f "$SMA_CFG" ] && grep -q '^intervall\.modbus=5[[:space:]]*$' "$SMA_CFG"; then
+  sed -i 's/^intervall\.modbus=5[[:space:]]*$/intervall.modbus=15/' "$SMA_CFG"
+  echo "  SmaSolar: Abfrage-Intervall 5 s → 15 s"
+fi
+
 # homex.properties beim ersten Mal mit Fragen anlegen
 if [ ! -f "$SERVER/homex.properties" ]; then
   echo
